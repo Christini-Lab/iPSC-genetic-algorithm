@@ -5,14 +5,16 @@ from matplotlib import pyplot as plt
 
 from paci_jit_generator import wrapper
 
-import pdb
-
 from csv import writer
 from io import StringIO
 
-import time
-
 from jitcode import jitcode, y
+
+import pdb
+
+import os
+os.environ["CC"] = "gcc"
+
 
 Y_names = ['Vm', 'Ca_SR', 'Cai', 'g', 'd', 'f1', 'f2',
            'fCa', 'Xr1', 'Xr2', 'Xs', 'h', 'j', 'm',
@@ -54,63 +56,25 @@ ICaLRedMed = 1
 IKrRedMed = 1
 IKsRedMed = 1
 
-tic = time.time()
 
-
-
-
-
-t_span = [0, 6]
-
-
-
-
-
-x = wrapper()
-
+## This variable holds my system of Eqs
 system_of_ODEs = wrapper()
 ODE = jitcode(system_of_ODEs)
-
-
-
-import csv
-with open('ode_system.py')
-
-for i in range(0, len(system_of_ODEs)):
-  print(system_of_ODEs)
-
-
-
 pdb.set_trace()
-
-ODE.set_integrator('vode')
+ODE.set_integrator('vode', max_step=1e-3)
 ODE.set_initial_value(Y0)
-# ODE.set_integrator('BDF', max_step=1e-3)
 
-times = np.arange(0, 30, .001)
-data = np.zeros((len(times),23))
-
-tic = time.time()
-i = 0
-
-for t in times:
-  data[i,:] = ODE.integrate(t)
-  i+=1
-
-# output.seek(0)
-# sol = pd.read_csv(output)
-
-# sol = jitcode.solve_ivp(wrapper, t_span, Y0, method='BDF', max_step=1e-3)
-elapsed = time.time() - tic
-print(elapsed)
+output = StringIO()
+csv_writer = writer(output)
+tf = 10
 
 
-
-plt.plot(times, data[:,0])
-plt.show()
-
-# plt.plot(times, data[:,0])
-# plt.show()
+print("hello")
+# Don't know how to implement this
 pdb.set_trace()
-np.savetxt("../pythonSolutionJit.csv", data, delimiter=",")
-np.savetxt("../pySolutionTimeJit.csv", times, delimiter=",")
+while ODE.successful() and ODE.t < tf:
+    ODE.integrate(tf, step=True)
+    csv_writer.writerow([ODE.t, ODE.y])
+
+output.seek(0)
+sol = pd.read_csv(output)
