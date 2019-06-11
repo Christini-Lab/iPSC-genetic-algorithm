@@ -65,10 +65,13 @@ class PaciModel:
     i_kr_red_med = 1
     i_ks_red_med = 1
 
-    # Tune parameters
-    default_parameters = {'pk_na': 0.03, 'g_na': 3671.2302,
+    # Tunable parameters
+    default_parameters = {'g_na': 3671.2302,
                           'g_ca_l_meter_cube_per_f_per_s': 8.635702e-5,
-                          'g_f_s_per_f': 30.10312}
+                          'g_f_s_per_f': 30.10312, 'g_ks_s_per_f': 2.041,
+                          'g_kr_s_per_f': 29.8667, 'g_k1_s_per_f': 28.1492,
+                          'g_p_ca': 0.4125, 'g_b_na': 0.95, 'g_b_ca': 0.727272,
+                          'g_na_lmax': 17.25}
 
     y_initial = [-0.0749228904740065, 0.0936532528714175, 3.79675694306440e-05,
                  0, 8.25220533963093e-05, 0.741143500777858, 0.999983958619179,
@@ -111,14 +114,14 @@ class PaciModel:
                self.t_kelvin / self.f_coulomb_per_mole * log(
             self.nao_millimolar / y[17])
 
-        e_ca = 0.5 * self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
-            self.cao_millimolar / y[2])
+        e_ca = 0.5 * self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(self.cao_millimolar / y[2])
 
         e_k = self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
             self.ko_millimolar / self.ki_millimolar)
+        pk_na = 0.03
         e_ks = self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
-            (self.ko_millimolar + self.default_parameters['pk_na'] * self.nao_millimolar) / (
-                    self.ki_millimolar + self.default_parameters['pk_na'] * y[17]))
+            (self.ko_millimolar + pk_na * self.nao_millimolar) / (
+                    self.ki_millimolar + pk_na * y[17]))
 
         # iNa
         i_na = ((t < self.t_drug_application) * 1 + (t >= self.t_drug_application)
@@ -166,9 +169,8 @@ class PaciModel:
         # i NaL
         my_coef_tau_m = 1
         tau_i_na_l_ms = 200
-        g_na_lmax = 2.3 * 7.5
         vh_h_late = 87.61
-        i_na_l = g_na_lmax * y[18] ** 3 * y[19] * (y[0] - e_na)
+        i_na_l = self.default_parameters['g_na_lmax'] * y[18] ** 3 * y[19] * (y[0] - e_na)
 
         m_inf_l = 1 / (1 + np.exp(-(y[0] * 1000 + 42.85) / 5.264))
         alpha_m_l = 1 / (1 + np.exp((-60 - y[0] * 1000) / 5))
@@ -257,9 +259,8 @@ class PaciModel:
         d_y[16] = (r_inf - y[16]) / tau_r
 
         # i Ks
-        g_ks_s_per_f = 2.041
         i_ks = ((t < self.t_drug_application) * 1 + (t >= self.t_drug_application) *
-                self.i_ks_red_med) * g_ks_s_per_f * (y[0] - e_ks) * y[10] ** 2.0 * \
+                self.i_ks_red_med) * self.default_parameters['g_ks_s_per_f'] * (y[0] - e_ks) * y[10] ** 2.0 * \
                (1.0 + 0.6 / (1.0 + (3.8 * 0.00001 / y[2]) ** 1.4))
 
         xs_infinity = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 20.0) / 16.0))
@@ -271,9 +272,8 @@ class PaciModel:
         # i Kr
         l0 = 0.025
         q = 2.3  # dimensionless (in i_Kr_Xr1_gate)
-        g_kr_s_per_f = 29.8667
         i_kr = ((t < self.t_drug_application) * 1 + (
-                t >= self.t_drug_application) * self.i_kr_red_med) * g_kr_s_per_f * (
+                t >= self.t_drug_application) * self.i_kr_red_med) * self.default_parameters['g_kr_s_per_f']* (
                        y[0] - e_k) * y[8] * y[9] * sqrt(self.ko_millimolar / 5.4)
 
         v_half = 1000.0 * (-self.r_joule_per_mole_kelvin * self.t_kelvin / (
@@ -301,8 +301,7 @@ class PaciModel:
             0.5886 * (y[0] * 1000.0 - e_k * 1000.0 - 10.0))) / (
                           1.0 + np.exp(0.4547 * (y[0] * 1000.0 - e_k * 1000.0)))
         xk1_inf = alpha_k1 / (alpha_k1 + beta_k1)
-        g_k1_s_per_f = 28.1492
-        i_k1 = g_k1_s_per_f * xk1_inf * (y[0] - e_k) * sqrt(self.ko_millimolar / 5.4)
+        i_k1 = self.default_parameters['g_k1_s_per_f'] * xk1_inf * (y[0] - e_k) * sqrt(self.ko_millimolar / 5.4)
 
         # i NaCa
         km_ca_millimolar = 1.38
@@ -377,15 +376,12 @@ class PaciModel:
 
         # i pCa
         kp_ca_millimolar = 0.0005
-        g_p_ca = 0.4125
-        i_p_ca = g_p_ca * y[2] / (y[2] + kp_ca_millimolar)
+        i_p_ca = self.default_parameters['g_p_ca'] * y[2] / (y[2] + kp_ca_millimolar)
 
         # Background currents
-        g_b_na = 0.95
-        i_b_na = g_b_na * (y[0] - e_na)
+        i_b_na = self.default_parameters['g_b_na'] * (y[0] - e_na)
 
-        g_b_ca = 0.727272
-        i_b_ca = g_b_ca * (y[0] - e_ca)
+        i_b_ca = self.default_parameters['g_b_ca'] * (y[0] - e_ca)
 
         # Sarcoplasmic reticulum
         i_up = self.vmax_up_millimolar_per_second / (

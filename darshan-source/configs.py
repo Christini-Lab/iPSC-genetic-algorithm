@@ -23,7 +23,7 @@ class Parameter:
 
     Attributes:
         name: A string representing name of the parameter.
-        default_value: The experimentally derived value of the parameter.
+        default_value: The default value of the parameter.
     """
 
     def __init__(self, name, default_value):
@@ -38,10 +38,10 @@ class GeneticAlgorithmConfig:
     model.
 
     Attributes:
-        population_size: The size of the population at each generation.
+        population_size: The size of the population in each generation.
         max_generations: The max number of generations to run the algorithm for.
         target_objective: A TargetObjective enum object representing the
-            target objective of the genetic algorithm.
+                target objective of the genetic algorithm.
         tunable_parameters: A list of strings, representing the names of which
             parameters will be tuned.
         params_lower_bound: A float representing the lower bound a randomized
