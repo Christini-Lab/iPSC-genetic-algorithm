@@ -1,9 +1,7 @@
-from math import log, sqrt, floor
-from numpy import exp
+import math
 import numpy as np
 from jitcode import jitcode, y
 import symengine
-import mpmath
 
 def wrapper():
     tDrugApplication = 10000
@@ -75,7 +73,7 @@ def Paci2018(time, tDrugApplication, INaFRedMed,
     E_Na = R*T/F*symengine.log(Nao/y(17))
     E_Ca = 0.5*R*T/F*symengine.log(Cao/y(2))
 
-    E_K  = R*T/F*log(Ko/Ki)
+    E_K  = R*T/F*math.log(Ko/Ki)
     PkNa = 0.03   # dimensionless (in electric_potentials)
     E_Ks = R*T/F*symengine.log((Ko+PkNa*Nao)/(Ki+PkNa*y(17)))
 
@@ -196,9 +194,9 @@ def Paci2018(time, tDrugApplication, INaFRedMed,
     L0           = 0.025   # dimensionless (in i_Kr_Xr1_gate)
     Q            = 2.3   # dimensionless (in i_Kr_Xr1_gate)
     g_Kr         = 29.8667   # S_per_F (in i_Kr)
-    i_Kr         = ((time<tDrugApplication)*1+(time >= tDrugApplication)*IKrRedMed)*g_Kr*(y(0)-E_K)*y(8)*y(9)*sqrt(Ko/5.4)
+    i_Kr         = ((time<tDrugApplication)*1+(time >= tDrugApplication)*IKrRedMed)*g_Kr*(y(0)-E_K)*y(8)*y(9)*math.sqrt(Ko/5.4)
 
-    V_half       = 1000.0*(-R*T/(F*Q)*log((1.0+Cao/2.6)**4.0/(L0*(1.0+Cao/0.58)**4.0))-0.019)
+    V_half       = 1000.0*(-R*T/(F*Q)*math.log((1.0+Cao/2.6)**4.0/(L0*(1.0+Cao/0.58)**4.0))-0.019)
 
     Xr1_inf      = 1.0/(1.0+symengine.exp((V_half-y(0)*1000.0)/4.9))
     alpha_Xr1    = 450.0/(1.0+symengine.exp((-45.0-y(0)*1000.0)/10.0))
@@ -217,7 +215,7 @@ def Paci2018(time, tDrugApplication, INaFRedMed,
     beta_K1  = (-1.509*symengine.exp(0.0002*(y(0)*1000.0-E_K*1000.0+100.0))+symengine.exp(0.5886*(y(0)*1000.0-E_K*1000.0-10.0)))/(1.0+symengine.exp(0.4547*(y(0)*1000.0-E_K*1000.0)))
     XK1_inf  = alpha_K1/(alpha_K1+beta_K1)
     g_K1     = 28.1492   # S_per_F (in i_K1)
-    i_K1     = g_K1*XK1_inf*(y(0)-E_K)*sqrt(Ko/5.4)
+    i_K1     = g_K1*XK1_inf*(y(0)-E_K)*math.sqrt(Ko/5.4)
 
     ## INaCa
     KmCa   = 1.38   # millimolar (in i_NaCa)
@@ -302,7 +300,7 @@ def Paci2018(time, tDrugApplication, INaFRedMed,
     stim_flag         = 0.0   # dimensionless (in stim_mode)
     i_stim_Period       = 60.0/i_stim_frequency
 
-    i_stim = ((time >= i_stim_Start) and (time <= i_stim_End) and (time-i_stim_Start-floor((time-i_stim_Start)/i_stim_Period)*i_stim_Period <= i_stim_PulseDuration))*stim_flag*i_stim_Amplitude/Cm+0.0
+    i_stim = ((time >= i_stim_Start) and (time <= i_stim_End) and (time-i_stim_Start-math.floor((time-i_stim_Start)/i_stim_Period)*i_stim_Period <= i_stim_PulseDuration))*stim_flag*i_stim_Amplitude/Cm+0.0
     
 
     ## Membrane potential

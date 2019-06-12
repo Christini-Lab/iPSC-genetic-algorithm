@@ -73,17 +73,10 @@ ODE = jitcode(system_of_ODEs)
 
 
 
-import csv
-with open('ode_system.py')
+# import csv
+# with open('ode_system.py')
 
-for i in range(0, len(system_of_ODEs)):
-  print(system_of_ODEs)
-
-
-
-pdb.set_trace()
-
-ODE.set_integrator('vode')
+ODE.set_integrator('dopri5')
 ODE.set_initial_value(Y0)
 # ODE.set_integrator('BDF', max_step=1e-3)
 

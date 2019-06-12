@@ -59,7 +59,7 @@ t_span = [0, 6]
 sol = solve_ivp(wrapper, t_span, Y0, method='BDF', max_step=1e-3)
 elapsed = time.time() - tic
 print(elapsed)
-
+pdb.set_trace()
 plt.plot(sol.t, sol.y[0])
 plt.show()
 
