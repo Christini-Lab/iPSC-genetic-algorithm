@@ -1,8 +1,4 @@
-import os
-
 from absl import app
-from absl import flags
-from matplotlib import pyplot as plt
 
 import configs
 import genetic_algorithm
@@ -15,9 +11,7 @@ def main(unused_argv):
         configs.Parameter(name='g_ks_s_per_f', default_value=2.041),
         configs.Parameter(name='g_kr_s_per_f', default_value=29.8667),
         configs.Parameter(name='g_k1_s_per_f', default_value=28.1492),
-        configs.Parameter(name='g_p_ca', default_value=0.4125),
         configs.Parameter(name='g_b_na', default_value=0.95),
-        configs.Parameter(name='g_b_ca', default_value=0.727272),
         configs.Parameter(name='g_na_lmax', default_value=17.25),
     ]
     # Parameters are sorted alphabetically to maintain order during each
@@ -25,8 +19,8 @@ def main(unused_argv):
     parameters.sort(key=lambda x: x.name)
 
     config = configs.GeneticAlgorithmConfig(
-        population_size=25,
-        max_generations=25,
+        population_size=5,
+        max_generations=5,
         target_objective=configs.TargetObjective.SINGLE_ACTION_POTENTIAL,
         tunable_parameters=parameters,
         params_lower_bound=0.5,
@@ -42,7 +36,7 @@ def main(unused_argv):
     best_ind = ga_result.get_best_individual(generation=0)
     ga_result.graph_individual(best_ind)
 
-    best_ind = ga_result.get_best_individual(generation=5)
+    best_ind = ga_result.get_best_individual(generation=config.max_generations)
     ga_result.graph_individual(best_ind)
 
 

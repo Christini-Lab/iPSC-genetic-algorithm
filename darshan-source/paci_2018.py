@@ -1,6 +1,5 @@
 from math import log, sqrt, floor
 
-from absl import flags
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy import integrate
@@ -8,22 +7,12 @@ from scipy import integrate
 import configs
 
 
-flags.DEFINE_integer(
-    'duration', 2,
-    'Duration of integration, in seconds.')
-
-flags.DEFINE_bool(
-    'graph', False,
-    'Graph generated integration.')
-
-FLAGS = flags.FLAGS
-
-
 class PaciModel:
     """An implementation of the Paci2018 model by Paci et al.
 
     Attributes:
-          TODO List out important (tunable) parameters here.
+          default_parameters: A dict containing tunable parameters along with
+            their default values as specified in Paci et al.
     """
 
     # Parameters from optimizer.
@@ -104,16 +93,26 @@ class PaciModel:
                 self.y_initial,
                 method='BDF',
                 max_step=1e-3))
+        elif target_objective == configs.TargetObjective.STOCHASTIC_PACING:
+            return Trace(integrate.solve_ivp(
+                self.stochastic_pacing,
+                [0, 7],
+                self.y_initial,
+                method='BDF',
+                max_step=1e-3))
 
     def action_potential_diff_eq(self, t, y):
-        """TODO Get help from Alex to write this comment."""
         d_y = np.empty(23)
 
         # Nernst potential
         e_na = self.r_joule_per_mole_kelvin *\
                self.t_kelvin / self.f_coulomb_per_mole * log(
             self.nao_millimolar / y[17])
+        if self.cao_millimolar <= 0:
+            print('C: {}'.format(self.cao_millimolar))
 
+        if y[2] <= 0:
+            print(y[2])
         e_ca = 0.5 * self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(self.cao_millimolar / y[2])
 
         e_k = self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
@@ -447,26 +446,41 @@ class PaciModel:
         d_y[1] = ca_sr_buf_sr * self.vc_micrometer_cube / self.v_sr_micrometer_cube * (
                 i_up - (i_rel + i_leak))
 
-        # Stimulation
-        i_stimulation_amplitude_amperes = 7.5e-10
-        i_stimulation_end_seconds = 1000.0
-        i_stimulation_pulse_duration_seconds = 0.005
-        i_stimulation_start_seconds = 0.0
-        i_stimulation_frequency_per_second = 60.0
-        stimulation_flag = 0.0
-        i_stimulation_period = 60.0 / i_stimulation_frequency_per_second
-
-        if t >= i_stimulation_start_seconds and t <= i_stimulation_end_seconds \
-                and t - i_stimulation_start_seconds - floor(
-            (t - i_stimulation_start_seconds) / i_stimulation_period) * \
-                i_stimulation_period <= i_stimulation_pulse_duration_seconds:
-            i_stimulation = stimulation_flag * i_stimulation_amplitude_amperes / self.cm_farad
-        else:
-            i_stimulation = 0.0
+        i_stimulation = 0.0
 
         # Membrane potential
         d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l +
                    i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca - i_stimulation)
+        return d_y
+
+    def stochastic_pacing(self, t, y):
+        d_y = self.action_potential_diff_eq(t, y)
+
+        # Stimulation
+        i_stimulation_amplitude_amperes = 7.5e-10
+        i_stimulation_end_secs = 1000.0
+        i_stim_pulse_dur_secs = 0.005
+        i_stimulation_start_secs = 0.0
+        i_stimulation_frequency_per_minute = 60.0
+        i_stimulation_period = 60.0 / i_stimulation_frequency_per_minute
+
+        stochastic_pacing_test_array = [1.5, 2.5, 3.3, 3.5, 4.5, 6]
+        is_in_bounds = i_stimulation_start_secs <= t <= i_stimulation_end_secs
+        is_in_pulse_span = t - i_stimulation_start_secs - \
+                           floor((t - i_stimulation_start_secs) / i_stimulation_period) * \
+                           i_stimulation_period <= i_stim_pulse_dur_secs
+
+        # Stochastic pacing is_in_pulse_span
+        is_in_pulse_span_stoch = any(
+            0 <= i - t <= i_stim_pulse_dur_secs
+            for i in stochastic_pacing_test_array)
+
+        if is_in_bounds and is_in_pulse_span_stoch:
+            i_stimulation = i_stimulation_amplitude_amperes / self.cm_farad
+        else:
+            i_stimulation = 0.0
+
+        d_y[0] += i_stimulation
         return d_y
 
 

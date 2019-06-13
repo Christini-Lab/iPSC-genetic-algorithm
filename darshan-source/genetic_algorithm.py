@@ -20,6 +20,7 @@ from matplotlib.colors import LogNorm
 
 import paci_2018
 
+
 class GeneticAlgorithm:
     """Encapsulates state and behavior of a genetic algorithm.
 
@@ -310,8 +311,14 @@ class GeneticAlgorithmResult:
 
 
 class Individual:
+    """Represents an individual in the population.
+
+    Attributes:
+        param_set: The parameter set, ordered according to labels found in
+            the config object the individual is associated with.
+        error: The error compared to the target objective.
+    """
 
     def __init__(self, param_set, error):
         self.param_set = param_set
         self.error = error
-
