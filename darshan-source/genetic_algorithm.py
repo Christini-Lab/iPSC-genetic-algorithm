@@ -196,7 +196,7 @@ def _generate_trace(config, params=None):
             new_params[config.tunable_parameters[i].name] = params[i]
     return paci_2018.PaciModel(
         updated_parameters=new_params).generate_response(
-        config.target_objective)
+        config.protocol)
 
 
 def _calculate_error(baseline_trace, other_trace):
@@ -220,7 +220,7 @@ class GeneticAlgorithmResult:
 
     Attributes:
         config: The config object used with the genetic algorithm run.
-        baseline_trace: A Trace object which was the target objective of the
+        baseline_trace: A Trace object which was the protocol of the
             genetic algorithm run.
     """
 

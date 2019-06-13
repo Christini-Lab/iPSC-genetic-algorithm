@@ -69,40 +69,93 @@ class PaciModel:
                  0.0995891726023512, 0.0249102482276486, 0.841714924246004,
                  0.00558005376429710, 8.64821066193476, 0.00225383437957339,
                  0.0811507312565017, 0.0387066722172937, 0.0260449185736275,
-                 0.0785849084330126]
+                 0.0785849084330126, 0]  # Added zero here for current
 
     def __init__(self, updated_parameters=dict()):
         self.default_parameters.update(updated_parameters)
         self.updated_parameters = updated_parameters
 
-    def generate_response(self, target_objective):
+    def generate_response(self, protocol):
         """Returns a trace based on the specified target objective.
 
         Args:
-            target_objective: A configs.TargetObjective enum object representing
+            protocol: A configs.TargetObjective enum object representing
                 the target objective needed.
 
         Returns:
             A Trace object representing the change in membrane potential over
             time.
         """
-        if target_objective == configs.TargetObjective.SINGLE_ACTION_POTENTIAL:
-            return Trace(integrate.solve_ivp(
-                self.action_potential_diff_eq,
+        if isinstance(protocol, configs.SingleActionPotentialProtocol):
+            solution = integrate.solve_ivp(
+                self.generate_single_action_potential_function(protocol),
                 [0, 2],
                 self.y_initial,
                 method='BDF',
-                max_step=1e-3))
-        elif target_objective == configs.TargetObjective.STOCHASTIC_PACING:
-            return Trace(integrate.solve_ivp(
-                self.stochastic_pacing,
-                [0, 7],
+                max_step=1e-3)
+            return Trace(solution.t, solution.y)
+        elif isinstance(protocol, configs.StochasticPacingProtocol):
+            solution = integrate.solve_ivp(
+                self.generate_stochastic_pacing_function(protocol),
+                [0, protocol.duration],
                 self.y_initial,
                 method='BDF',
-                max_step=1e-3))
+                max_step=1e-3)
+            return Trace(solution.t, solution.y)
+        elif isinstance(protocol, configs.VoltageClampProtocol):
+            solution = integrate.solve_ivp(
+                self.generate_voltage_clamp_function(protocol),
+                [0, protocol.voltage_change_endpoints[-1]],
+                self.y_initial,
+                method='BDF',
+                max_step=1e-3)
+            return Trace(solution.t, solution.y)
+
+    def generate_single_action_potential_function(self, protocol):
+        def single_action_potential(t, y):
+            return self.action_potential_diff_eq(t, y)
+
+        return single_action_potential
+
+    def generate_voltage_clamp_function(self, protocol):
+
+        def voltage_clamp(t, y):
+            y[0] = protocol.get_voltage_at_time(t)
+            return self.action_potential_diff_eq(t, y)
+
+        return voltage_clamp
+
+    def generate_stochastic_pacing_function(self, protocol):
+        def stochastic_pacing(t, y):
+            d_y = self.action_potential_diff_eq(t, y)
+
+            # Stimulation
+            i_stimulation_amplitude_amperes = 7.5e-10
+            i_stimulation_end_secs = 1000.0
+            i_stim_pulse_dur_secs = 0.005
+            i_stimulation_start_secs = 0.0
+            i_stimulation_frequency_per_minute = 60.0
+            i_stimulation_period = 60.0 / i_stimulation_frequency_per_minute
+
+            is_in_bounds = i_stimulation_start_secs <= t <= i_stimulation_end_secs
+
+            # Stochastic pacing is_in_pulse_span
+            is_in_pulse_span_stoch = any(
+                0 <= i - t <= i_stim_pulse_dur_secs
+                for i in protocol.stimulation_timestamps)
+
+            if is_in_bounds and is_in_pulse_span_stoch:
+                i_stimulation = i_stimulation_amplitude_amperes / self.cm_farad
+            else:
+                i_stimulation = 0.0
+
+            d_y[0] += i_stimulation
+            return d_y
+
+        return stochastic_pacing
 
     def action_potential_diff_eq(self, t, y):
-        d_y = np.empty(23)
+        d_y = np.empty(24)  # Added current as index 23
 
         # Nernst potential
         e_na = self.r_joule_per_mole_kelvin *\
@@ -446,41 +499,11 @@ class PaciModel:
         d_y[1] = ca_sr_buf_sr * self.vc_micrometer_cube / self.v_sr_micrometer_cube * (
                 i_up - (i_rel + i_leak))
 
-        i_stimulation = 0.0
-
         # Membrane potential
         d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l +
-                   i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca - i_stimulation)
-        return d_y
-
-    def stochastic_pacing(self, t, y):
-        d_y = self.action_potential_diff_eq(t, y)
-
-        # Stimulation
-        i_stimulation_amplitude_amperes = 7.5e-10
-        i_stimulation_end_secs = 1000.0
-        i_stim_pulse_dur_secs = 0.005
-        i_stimulation_start_secs = 0.0
-        i_stimulation_frequency_per_minute = 60.0
-        i_stimulation_period = 60.0 / i_stimulation_frequency_per_minute
-
-        stochastic_pacing_test_array = [1.5, 2.5, 3.3, 3.5, 4.5, 6]
-        is_in_bounds = i_stimulation_start_secs <= t <= i_stimulation_end_secs
-        is_in_pulse_span = t - i_stimulation_start_secs - \
-                           floor((t - i_stimulation_start_secs) / i_stimulation_period) * \
-                           i_stimulation_period <= i_stim_pulse_dur_secs
-
-        # Stochastic pacing is_in_pulse_span
-        is_in_pulse_span_stoch = any(
-            0 <= i - t <= i_stim_pulse_dur_secs
-            for i in stochastic_pacing_test_array)
-
-        if is_in_bounds and is_in_pulse_span_stoch:
-            i_stimulation = i_stimulation_amplitude_amperes / self.cm_farad
-        else:
-            i_stimulation = 0.0
-
-        d_y[0] += i_stimulation
+                   i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
+        d_y[23] = (i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l
+                   + i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
         return d_y
 
 
@@ -492,9 +515,11 @@ class Trace:
         y: The membrane voltage, in volts, at a point in time.
     """
 
-    def __init__(self, solution):
-        self.t = solution.t
-        self.y = solution.y
+    def __init__(self, t, y):
+        self.t = t
+        self.y = y
 
-    def graph(self):
-        plt.plot(self.t, self.y[0])
+    def __eq__(self, other):
+        return np.allclose(self.t, other.t, atol=0.001) \
+               and np.allclose(self.y[0], other.y[0], atol=0.001)
+

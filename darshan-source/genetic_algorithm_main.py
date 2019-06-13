@@ -21,7 +21,7 @@ def main(unused_argv):
     config = configs.GeneticAlgorithmConfig(
         population_size=5,
         max_generations=5,
-        target_objective=configs.TargetObjective.SINGLE_ACTION_POTENTIAL,
+        protocol=configs.SingleActionPotentialProtocol(),
         tunable_parameters=parameters,
         params_lower_bound=0.5,
         params_upper_bound=1.5,
