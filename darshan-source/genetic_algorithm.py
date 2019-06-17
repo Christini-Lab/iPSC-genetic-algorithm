@@ -19,6 +19,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 
 import paci_2018
+import configs
 
 
 class GeneticAlgorithm:
@@ -102,7 +103,8 @@ class GeneticAlgorithm:
         """
         return _calculate_error(
             self.baseline_trace,
-            _generate_trace(self.config, new_parameters))
+            _generate_trace(self.config, new_parameters),
+            index=self.config.protocol.y_index)
 
     def mate(self, i_one, i_two):
         """Performs crossover between two individuals.
@@ -199,11 +201,11 @@ def _generate_trace(config, params=None):
         config.protocol)
 
 
-def _calculate_error(baseline_trace, other_trace):
+def _calculate_error(baseline_trace, other_trace, index):
     # TODO Implement interpolation method.
     error = 0
     for i in range(0, min(len(baseline_trace.t), len(other_trace.t))):
-        error += abs(baseline_trace.y[0][i] - other_trace.y[0][i]) ** 2
+        error += abs(baseline_trace.y[index][i] - other_trace.y[index][i]) ** 2
     return error
 
 
@@ -287,9 +289,14 @@ class GeneticAlgorithmResult:
     def graph_individual(self, individual):
         fig = plt.figure()
         plt.subplot(1, 2, 1)
-        plt.plot(self.baseline_trace.t, self.baseline_trace.y[0], color='black')
+        plt.plot(
+            self.baseline_trace.t,
+            self.baseline_trace.y[self.config.protocol.y_index],
+            color='black')
         trace = _generate_trace(config=self.config, params=individual.param_set)
-        plt.plot(trace.t, trace.y[0], color='green')
+        plt.plot(trace.t, trace.y[self.config.protocol.y_index], color='green')
+        if isinstance(self.config.protocol, configs.VoltageClampProtocol):
+            plt.plot(trace.t, trace.y[0], color='blue')
 
         plt.subplot(1, 2, 2)
         parameter_scaling = []

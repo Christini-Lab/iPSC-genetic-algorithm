@@ -7,11 +7,14 @@ import random
 
 class SingleActionPotentialProtocol:
     """Maps the change in membrane potential over the course of a heart beat."""
-    pass
+
+    y_index = 0
 
 
 class StochasticPacingProtocol:
     """Several random stimulations over some time."""
+
+    y_index = 0
 
     def __init__(self, stimulations, duration):
         self.stimulations = stimulations
@@ -34,6 +37,8 @@ class VoltageClampSteps:
 
 class VoltageClampProtocol:
     """A voltage clamp experiment holds certain voltages over time."""
+
+    y_index = 23
 
     def __init__(self, steps):
         self.steps = steps

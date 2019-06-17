@@ -1,6 +1,5 @@
-from math import log, sqrt, floor
+from math import log, sqrt
 
-from matplotlib import pyplot as plt
 import numpy as np
 from scipy import integrate
 
@@ -129,23 +128,21 @@ class PaciModel:
         def stochastic_pacing(t, y):
             d_y = self.action_potential_diff_eq(t, y)
 
-            # Stimulation
-            i_stimulation_amplitude_amperes = 7.5e-10
-            i_stimulation_end_secs = 1000.0
-            i_stim_pulse_dur_secs = 0.005
-            i_stimulation_start_secs = 0.0
-            i_stimulation_frequency_per_minute = 60.0
-            i_stimulation_period = 60.0 / i_stimulation_frequency_per_minute
+            stim_amplitude_amps = 7.5e-10
+            stim_end_secs = 1000.0
+            stim_pulse_duration_secs = 0.005
+            stim_start_secs = 0.0
+            is_in_bounds = stim_start_secs <= t <= stim_end_secs
 
-            is_in_bounds = i_stimulation_start_secs <= t <= i_stimulation_end_secs
+            for i in protocol.stimulation_timestamps:
+                if 0 <= i - t <= stim_pulse_duration_secs:
+                    should_stimulate = True
+                    break
+            else:
+                should_stimulate = False
 
-            # Stochastic pacing is_in_pulse_span
-            is_in_pulse_span_stoch = any(
-                0 <= i - t <= i_stim_pulse_dur_secs
-                for i in protocol.stimulation_timestamps)
-
-            if is_in_bounds and is_in_pulse_span_stoch:
-                i_stimulation = i_stimulation_amplitude_amperes / self.cm_farad
+            if is_in_bounds and should_stimulate:
+                i_stimulation = stim_amplitude_amps / self.cm_farad
             else:
                 i_stimulation = 0.0
 
@@ -522,4 +519,3 @@ class Trace:
     def __eq__(self, other):
         return np.allclose(self.t, other.t, atol=0.001) \
                and np.allclose(self.y[0], other.y[0], atol=0.001)
-

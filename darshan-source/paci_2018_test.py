@@ -1,9 +1,11 @@
+import os
 import unittest
 import random
 
 import paci_2018
 import configs
 
+TEST_DATA_DIR = 'test_data'
 ORIGINAL_SAP = 'original_single_action_potential.txt'
 ORIGINAL_SP = 'original_stochastic_pacing.txt'
 ORIGINAL_VC = 'original_voltage_clamp.txt'
@@ -12,7 +14,7 @@ ORIGINAL_VC = 'original_voltage_clamp.txt'
 class TestPaci2018(unittest.TestCase):
 
     def test_single_action_potential(self):
-        expected_trace = _read_in_trace(ORIGINAL_SAP)
+        expected_trace = _read_in_trace(os.path.join(ORIGINAL_SAP))
 
         test_trace = paci_2018.PaciModel().generate_response(
             configs.SingleActionPotentialProtocol())
@@ -46,10 +48,10 @@ class TestPaci2018(unittest.TestCase):
         self.assertEqual(expected_trace, test_trace)
 
 
-def _read_in_trace(filename):
+def _read_in_trace(filename, test_dir=TEST_DATA_DIR):
     expected_t = []
     expected_y = []
-    with open(filename, 'r') as f:
+    with open(os.path.join(test_dir, filename), 'r') as f:
         for line in f:
             expected_t.append(float(line.split(',')[0]))
             expected_y.append(float(line.split(',')[1]))

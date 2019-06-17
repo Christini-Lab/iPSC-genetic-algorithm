@@ -17,11 +17,20 @@ def main(unused_argv):
     # Parameters are sorted alphabetically to maintain order during each
     # generation of the genetic algorithm.
     parameters.sort(key=lambda x: x.name)
+    steps = [
+        configs.VoltageClampSteps(duration=0.1, voltage=-0.08),
+        configs.VoltageClampSteps(duration=0.1, voltage=-0.12),
+        configs.VoltageClampSteps(duration=0.5, voltage=-0.06),
+        configs.VoltageClampSteps(duration=0.05, voltage=-0.04),
+        configs.VoltageClampSteps(duration=0.15, voltage=0.02),
+        configs.VoltageClampSteps(duration=0.025, voltage=-0.08),
+        configs.VoltageClampSteps(duration=0.3, voltage=0.04),
+    ]
 
     config = configs.GeneticAlgorithmConfig(
         population_size=5,
         max_generations=5,
-        protocol=configs.SingleActionPotentialProtocol(),
+        protocol=configs.VoltageClampProtocol(steps=steps),
         tunable_parameters=parameters,
         params_lower_bound=0.5,
         params_upper_bound=1.5,
