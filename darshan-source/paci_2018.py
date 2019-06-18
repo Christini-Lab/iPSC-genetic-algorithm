@@ -1,17 +1,22 @@
 from math import log, sqrt
 
+from absl import logging
 import numpy as np
 from scipy import integrate
 
-import configs
+from irregular_pacing import IrregularPacingProtocol
+from single_action_potential import SingleActionPotentialProtocol
+from voltage_clamp import VoltageClampProtocol
 
 
 class PaciModel:
     """An implementation of the Paci2018 model by Paci et al.
 
     Attributes:
-          default_parameters: A dict containing tunable parameters along with
+        default_parameters: A dict containing tunable parameters along with
             their default values as specified in Paci et al.
+        updated_parameters: A dict containing all parameters that are being
+            tuned.
     """
 
     # Parameters from optimizer.
@@ -78,14 +83,13 @@ class PaciModel:
         """Returns a trace based on the specified target objective.
 
         Args:
-            protocol: A configs.TargetObjective enum object representing
-                the target objective needed.
+            protocol: An object of a specified protocol.
 
         Returns:
             A Trace object representing the change in membrane potential over
             time.
         """
-        if isinstance(protocol, configs.SingleActionPotentialProtocol):
+        if isinstance(protocol, SingleActionPotentialProtocol):
             solution = integrate.solve_ivp(
                 self.generate_single_action_potential_function(protocol),
                 [0, 2],
@@ -93,15 +97,15 @@ class PaciModel:
                 method='BDF',
                 max_step=1e-3)
             return Trace(solution.t, solution.y)
-        elif isinstance(protocol, configs.StochasticPacingProtocol):
+        elif isinstance(protocol, IrregularPacingProtocol):
             solution = integrate.solve_ivp(
-                self.generate_stochastic_pacing_function(protocol),
+                self.generate_irregular_pacing_func(protocol),
                 [0, protocol.duration],
                 self.y_initial,
                 method='BDF',
                 max_step=1e-3)
             return Trace(solution.t, solution.y)
-        elif isinstance(protocol, configs.VoltageClampProtocol):
+        elif isinstance(protocol, VoltageClampProtocol):
             solution = integrate.solve_ivp(
                 self.generate_voltage_clamp_function(protocol),
                 [0, protocol.voltage_change_endpoints[-1]],
@@ -111,10 +115,48 @@ class PaciModel:
             return Trace(solution.t, solution.y)
 
     def generate_single_action_potential_function(self, protocol):
+        del protocol  # May be used later.
+
         def single_action_potential(t, y):
             return self.action_potential_diff_eq(t, y)
 
         return single_action_potential
+
+    def generate_irregular_pacing_func(self, protocol):
+        offset_times = protocol.make_offset_generator()
+
+        def stochastic_pacing(t, y):
+            d_y = self.action_potential_diff_eq(t, y)
+
+            is_deriv_near_zero = abs(d_y[0] - 0) < 0.0001
+            if is_deriv_near_zero and y[0] < protocol.DIAS_THRESHOLD_VOLTAGE:
+                # First discovered diastole start.
+                if not protocol.diastole_starts:
+                    protocol.diastole_starts.append(t)
+
+                # Check to make sure diastole start is not very close to
+                # previous diastole start. This is likely to occur since there
+                # are many time steps (all near to each other) when derivative \
+                # is approximately zero.
+                dias_start_thresh = 0.01
+                if (protocol.diastole_starts and
+                    abs(protocol.diastole_starts[-1] - t) > dias_start_thresh):
+                    protocol.diastole_starts.append(t)
+                    try:
+                        protocol.add_stimulation_time(t + next(offset_times))
+                    except StopIteration:
+                        pass
+
+            if protocol.should_stimulate(t):
+                # logging.log_every_n(0, 'Stimulating at time: %f', 280, t)
+                i_stimulation = protocol.STIM_AMPLITUDE_AMPS / self.cm_farad
+            else:
+                i_stimulation = 0.0
+
+            d_y[0] += i_stimulation
+            return d_y
+
+        return stochastic_pacing
 
     def generate_voltage_clamp_function(self, protocol):
 
@@ -124,35 +166,10 @@ class PaciModel:
 
         return voltage_clamp
 
-    def generate_stochastic_pacing_function(self, protocol):
-        def stochastic_pacing(t, y):
-            d_y = self.action_potential_diff_eq(t, y)
-
-            stim_amplitude_amps = 7.5e-10
-            stim_end_secs = 1000.0
-            stim_pulse_duration_secs = 0.005
-            stim_start_secs = 0.0
-            is_in_bounds = stim_start_secs <= t <= stim_end_secs
-
-            for i in protocol.stimulation_timestamps:
-                if 0 <= i - t <= stim_pulse_duration_secs:
-                    should_stimulate = True
-                    break
-            else:
-                should_stimulate = False
-
-            if is_in_bounds and should_stimulate:
-                i_stimulation = stim_amplitude_amps / self.cm_farad
-            else:
-                i_stimulation = 0.0
-
-            d_y[0] += i_stimulation
-            return d_y
-
-        return stochastic_pacing
-
     def action_potential_diff_eq(self, t, y):
-        d_y = np.empty(24)  # Added current as index 23
+        # Added current as index 23, and diastolic start times as index 24,
+        # and will save stochastic pacing offsets in index 25
+        d_y = np.empty(24)
 
         # Nernst potential
         e_na = self.r_joule_per_mole_kelvin *\

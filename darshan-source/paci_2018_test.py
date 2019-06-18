@@ -3,7 +3,7 @@ import unittest
 import random
 
 import paci_2018
-import configs
+import ga_config
 
 TEST_DATA_DIR = 'test_data'
 ORIGINAL_SAP = 'original_single_action_potential.txt'
@@ -17,7 +17,7 @@ class TestPaci2018(unittest.TestCase):
         expected_trace = _read_in_trace(os.path.join(ORIGINAL_SAP))
 
         test_trace = paci_2018.PaciModel().generate_response(
-            configs.SingleActionPotentialProtocol())
+            ga_config.SingleActionPotentialProtocol())
 
         self.assertEqual(expected_trace, test_trace)
 
@@ -25,15 +25,15 @@ class TestPaci2018(unittest.TestCase):
         expected_trace = _read_in_trace(ORIGINAL_VC)
 
         steps = [
-            configs.VoltageClampSteps(duration=0.1, voltage=-0.08),
-            configs.VoltageClampSteps(duration=0.1, voltage=-0.12),
-            configs.VoltageClampSteps(duration=0.5, voltage=-0.06),
-            configs.VoltageClampSteps(duration=0.05, voltage=-0.04),
-            configs.VoltageClampSteps(duration=0.15, voltage=0.02),
-            configs.VoltageClampSteps(duration=0.025, voltage=-0.08),
-            configs.VoltageClampSteps(duration=0.3, voltage=0.04),
+            ga_config.VoltageClampSteps(duration=0.1, voltage=-0.08),
+            ga_config.VoltageClampSteps(duration=0.1, voltage=-0.12),
+            ga_config.VoltageClampSteps(duration=0.5, voltage=-0.06),
+            ga_config.VoltageClampSteps(duration=0.05, voltage=-0.04),
+            ga_config.VoltageClampSteps(duration=0.15, voltage=0.02),
+            ga_config.VoltageClampSteps(duration=0.025, voltage=-0.08),
+            ga_config.VoltageClampSteps(duration=0.3, voltage=0.04),
         ]
-        protocol = configs.VoltageClampProtocol(steps=steps)
+        protocol = ga_config.VoltageClampProtocol(steps=steps)
         test_trace = paci_2018.PaciModel().generate_response(protocol=protocol)
 
         self.assertEqual(expected_trace, test_trace)
@@ -42,7 +42,7 @@ class TestPaci2018(unittest.TestCase):
         expected_trace = _read_in_trace(ORIGINAL_SP)
 
         random.seed(3)
-        protocol = configs.StochasticPacingProtocol(duration=10, stimulations=4)
+        protocol = ga_config.StochasticPacingProtocol(duration=10, stimulations=4)
         test_trace = paci_2018.PaciModel().generate_response(protocol=protocol)
 
         self.assertEqual(expected_trace, test_trace)
