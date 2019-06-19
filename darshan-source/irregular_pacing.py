@@ -1,3 +1,6 @@
+from matplotlib import pyplot as plt
+import numpy as np
+
 """Contains class representing an irregular pacing protocol."""
 
 
@@ -20,14 +23,12 @@ class IrregularPacingProtocol(object):
     DIAS_THRESHOLD_VOLTAGE = -0.06
     STIM_AMPLITUDE_AMPS = 7.5e-10
     _MAX_STIM_INTERVAL = 1.55
-    _STIM_DURATION = 0.005
-
-    stimulation_times = []
-    diastole_starts = []
+    STIM_DURATION = 0.005
 
     def __init__(self, duration, stimulation_offsets):
         self.duration = duration
         self.stimulation_offsets = stimulation_offsets
+        self.all_stimulation_times = []
 
     @property
     def stimulation_offsets(self):
@@ -46,11 +47,5 @@ class IrregularPacingProtocol(object):
     def make_offset_generator(self):
         return (i for i in self._stimulation_offsets)
 
-    def add_stimulation_time(self, t):
-        self.stimulation_times.append(t)
 
-    def should_stimulate(self, t):
-        for i in range(len(self.stimulation_times)):
-            if abs(self.stimulation_times[i] - t) < self._STIM_DURATION:
-                return True
-        return False
+

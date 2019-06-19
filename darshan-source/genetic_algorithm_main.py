@@ -23,12 +23,12 @@ def main(unused_argv):
     parameters.sort(key=lambda x: x.name)
 
     irregular_pacing_protocol = irregular_pacing.IrregularPacingProtocol(
-        duration=10,
-        stimulation_offsets=[0.2, 0.5, 0.3, 0.1])
+        duration=6,
+        stimulation_offsets=[0.2, 0.5, 0.1, 0.3])
 
     config = ga_config.GeneticAlgorithmConfig(
-        population_size=4,
-        max_generations=4,
+        population_size=10,
+        max_generations=10,
         protocol=irregular_pacing_protocol,
         tunable_parameters=parameters,
         params_lower_bound=0.5,
@@ -41,12 +41,12 @@ def main(unused_argv):
     ga_result = genetic_algorithm.GeneticAlgorithm(config=config).run()
     ga_result.generate_heatmap()
 
-    ind = ga_result.get_best_individual(config.max_generations - 1)
-    ga_result.graph_individual_with_param_set(individual=ind)
+    ga_result.graph_error_over_generation()
 
-    random_ind = ga_result.get_random_individual(0)
-    ga_result.graph_individual_with_param_set(individual=random_ind)
-
+    for i in range(ga_result.config.max_generations):
+        print('Generation: {}'.format(i))
+        individual = ga_result.get_best_individual(i)
+        ga_result.graph_individual_with_param_set(individual=individual)
 
 
 if __name__ == '__main__':

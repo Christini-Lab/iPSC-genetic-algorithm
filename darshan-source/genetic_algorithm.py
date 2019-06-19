@@ -20,6 +20,7 @@ import scipy.interpolate
 import seaborn as sns
 
 import paci_2018
+from irregular_pacing import IrregularPacingProtocol
 
 
 class GeneticAlgorithm:
@@ -50,13 +51,17 @@ class GeneticAlgorithm:
 
         # Store initial population details for result processing.
         initial_population = []
-        for i in population:
+        for i in range(len(population)):
             initial_population.append(
-                Individual(param_set=i[0], error=i.fitness.values[0]))
+                Individual(
+                    param_set=population[i][0],
+                    error=population[i].fitness.values[0],
+                    generation=0,
+                    index=i))
         ga_result.generations.append(initial_population)
 
-        for generation in range(self.config.max_generations):
-            logging.info('Generation %d', generation + 1)
+        for generation in range(1, self.config.max_generations):
+            logging.info('Generation %d', generation)
             # Offspring are chosen through tournament selection. They are then
             # cloned, because they will be modified in-place later on.
             selected_offspring = toolbox.select(population, len(population))
@@ -87,9 +92,13 @@ class GeneticAlgorithm:
 
             # Store intermediate population details for result processing.
             intermediate_population = []
-            for i in population:
+            for i in range(len(population)):
                 intermediate_population.append(
-                    Individual(param_set=i[0], error=i.fitness.values[0]))
+                    Individual(
+                        param_set=population[i][0],
+                        error=population[i].fitness.values[0],
+                        generation=generation,
+                        index=i))
             ga_result.generations.append(intermediate_population)
 
             _generate_statistics(population)
@@ -311,7 +320,7 @@ class GeneticAlgorithmResult:
         """
         plt.figure()
         plt.subplot(1, 2, 1)
-        self.graph_individual(individual)
+        trace = self.graph_individual(individual)
 
         plt.subplot(1, 2, 2)
         parameter_scaling = []
@@ -361,6 +370,9 @@ class GeneticAlgorithmResult:
             best_individual_errors,
             label='Best Individual')
         plt.xticks(range(0, len(self.generations), 2))
+        hfont = {'fontname': 'Helvetica'}
+        plt.xlabel('Generation', **hfont)
+        plt.ylabel('Individual', **hfont)
         plt.legend(handles=[mean_error_line, best_individual_error_line])
         plt.show()
 
@@ -374,6 +386,8 @@ class Individual:
         error: The error compared to the target objective.
     """
 
-    def __init__(self, param_set, error):
+    def __init__(self, param_set, error, generation, index):
         self.param_set = param_set
         self.error = error
+        self.generation = generation
+        self.index = index

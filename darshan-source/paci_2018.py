@@ -1,6 +1,6 @@
 from math import log, sqrt
 
-from absl import logging
+from matplotlib import pyplot as plt
 import numpy as np
 from scipy import integrate
 
@@ -98,12 +98,14 @@ class PaciModel:
                 max_step=1e-3)
             return Trace(solution.t, solution.y)
         elif isinstance(protocol, IrregularPacingProtocol):
+            stim_time = IrregularPacingTiming()
             solution = integrate.solve_ivp(
-                self.generate_irregular_pacing_func(protocol),
+                self.generate_irregular_pacing_func(protocol, stim_time),
                 [0, protocol.duration],
                 self.y_initial,
                 method='BDF',
                 max_step=1e-3)
+            protocol.all_stimulation_times.append(stim_time)
             return Trace(solution.t, solution.y)
         elif isinstance(protocol, VoltageClampProtocol):
             solution = integrate.solve_ivp(
@@ -122,7 +124,7 @@ class PaciModel:
 
         return single_action_potential
 
-    def generate_irregular_pacing_func(self, protocol):
+    def generate_irregular_pacing_func(self, protocol, stim_time):
         offset_times = protocol.make_offset_generator()
 
         def stochastic_pacing(t, y):
@@ -131,23 +133,24 @@ class PaciModel:
             is_deriv_near_zero = abs(d_y[0] - 0) < 0.0001
             if is_deriv_near_zero and y[0] < protocol.DIAS_THRESHOLD_VOLTAGE:
                 # First discovered diastole start.
-                if not protocol.diastole_starts:
-                    protocol.diastole_starts.append(t)
+                if not stim_time.diastole_starts:
+                    stim_time.diastole_starts.append(t)
 
                 # Check to make sure diastole start is not very close to
                 # previous diastole start. This is likely to occur since there
                 # are many time steps (all near to each other) when derivative \
                 # is approximately zero.
                 dias_start_thresh = 0.01
-                if (protocol.diastole_starts and
-                    abs(protocol.diastole_starts[-1] - t) > dias_start_thresh):
-                    protocol.diastole_starts.append(t)
+                if (stim_time.diastole_starts and
+                    abs(stim_time.diastole_starts[-1] - t) > dias_start_thresh):
+
+                    stim_time.diastole_starts.append(t)
                     try:
-                        protocol.add_stimulation_time(t + next(offset_times))
+                        stim_time.add_stimulation_time(t + next(offset_times))
                     except StopIteration:
                         pass
 
-            if protocol.should_stimulate(t):
+            if stim_time.should_stimulate(t, protocol.STIM_DURATION):
                 # logging.log_every_n(0, 'Stimulating at time: %f', 280, t)
                 i_stimulation = protocol.STIM_AMPLITUDE_AMPS / self.cm_farad
             else:
@@ -536,3 +539,48 @@ class Trace:
     def __eq__(self, other):
         return np.allclose(self.t, other.t, atol=0.001) \
                and np.allclose(self.y[0], other.y[0], atol=0.001)
+
+
+class IrregularPacingTiming:
+
+    def __init__(self):
+        self.stimulation_times = []
+        self.diastole_starts = []
+
+    def add_stimulation_time(self, t):
+        self.stimulation_times.append(t)
+
+    def should_stimulate(self, t, stim_duration):
+        for i in range(len(self.stimulation_times)):
+            if abs(self.stimulation_times[i] - t) < stim_duration:
+                return True
+        return False
+
+    def plot_stimulation_times(self, trace):
+        print('Diastole starts: {}'.format(self.diastole_starts))
+        print('Stimulation starts: {}'.format(self.stimulation_times))
+
+        plt.plot(trace.t, trace.y[0], 'black')
+
+        stimulation_y_values = []
+        for i in self.stimulation_times:
+            index = _find_nearest_time(trace.t, i)
+            stimulation_y_values.append(trace.y[0][index])
+
+        diastole_y_values = []
+        for i in self.diastole_starts:
+            index = _find_nearest_time(trace.t, i)
+            diastole_y_values.append(trace.y[0][index])
+
+        sti = plt.scatter(self.stimulation_times, stimulation_y_values, c='red')
+        dia = plt.scatter(self.diastole_starts, diastole_y_values, c='green')
+        plt.legend(
+            (sti, dia),
+            ('Stimulation', 'Diastole Begins'),
+            loc='upper right')
+
+
+def _find_nearest_time(array, value):
+    array = np.asarray(array)
+    index = (np.abs(array - value)).argmin()
+    return index
