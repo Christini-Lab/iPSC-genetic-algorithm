@@ -1,17 +1,23 @@
 from math import log, sqrt
+import statistics
 
+from matplotlib import pyplot as plt
 import numpy as np
 from scipy import integrate
 
-import configs
+from irregular_pacing import IrregularPacingProtocol
+from single_action_potential import SingleActionPotentialProtocol
+from voltage_clamp import VoltageClampProtocol
 
 
 class PaciModel:
     """An implementation of the Paci2018 model by Paci et al.
 
     Attributes:
-          default_parameters: A dict containing tunable parameters along with
+        default_parameters: A dict containing tunable parameters along with
             their default values as specified in Paci et al.
+        updated_parameters: A dict containing all parameters that are being
+            tuned.
     """
 
     # Parameters from optimizer.
@@ -78,30 +84,33 @@ class PaciModel:
         """Returns a trace based on the specified target objective.
 
         Args:
-            protocol: A configs.TargetObjective enum object representing
-                the target objective needed.
+            protocol: An object of a specified protocol.
 
         Returns:
             A Trace object representing the change in membrane potential over
             time.
         """
-        if isinstance(protocol, configs.SingleActionPotentialProtocol):
-            solution = integrate.solve_ivp(
-                self.generate_single_action_potential_function(protocol),
-                [0, 2],
-                self.y_initial,
-                method='BDF',
-                max_step=1e-3)
+        if isinstance(protocol, SingleActionPotentialProtocol):
+            try:
+                solution = integrate.solve_ivp(
+                    self.generate_single_action_potential_function(protocol),
+                    [0, protocol.AP_DURATION_SECS],
+                    self.y_initial,
+                    method='BDF',
+                    max_step=1e-3)
+            except ValueError:
+                return None
             return Trace(solution.t, solution.y)
-        elif isinstance(protocol, configs.StochasticPacingProtocol):
+        elif isinstance(protocol, IrregularPacingProtocol):
+            pac_info = IrregularPacingInfo()
             solution = integrate.solve_ivp(
-                self.generate_stochastic_pacing_function(protocol),
+                self.generate_irregular_pacing_function(protocol, pac_info),
                 [0, protocol.duration],
                 self.y_initial,
                 method='BDF',
                 max_step=1e-3)
-            return Trace(solution.t, solution.y)
-        elif isinstance(protocol, configs.VoltageClampProtocol):
+            return Trace(solution.t, solution.y, pacing_info=pac_info)
+        elif isinstance(protocol, VoltageClampProtocol):
             solution = integrate.solve_ivp(
                 self.generate_voltage_clamp_function(protocol),
                 [0, protocol.voltage_change_endpoints[-1]],
@@ -111,10 +120,45 @@ class PaciModel:
             return Trace(solution.t, solution.y)
 
     def generate_single_action_potential_function(self, protocol):
+        del protocol  # May be used later.
+
         def single_action_potential(t, y):
             return self.action_potential_diff_eq(t, y)
 
         return single_action_potential
+
+    def generate_irregular_pacing_function(self, protocol, pac_info):
+        offset_times = protocol.make_offset_generator()
+
+        def stochastic_pacing(t, y):
+            d_y = self.action_potential_diff_eq(t, y)
+            pac_info.add_d_y_voltage(d_y[0])
+            pac_info.add_y_voltage(y[0])
+            pac_info.add_t(t)
+
+            if pac_info.detect_peak():
+                pac_info.add_peak(t)
+                voltage_diff = abs(
+                    pac_info.AVG_AP_START_VOLTAGE - pac_info.get_last_y())
+                pac_info.apd_90_end_voltage = \
+                    pac_info.get_last_y() - voltage_diff * 0.9
+
+            if pac_info.detect_apd_90():
+                try:
+                    pac_info.add_stimulation_time(t + next(offset_times))
+                    pac_info.add_apd_90(t)
+                except StopIteration:
+                    pass
+
+            if pac_info.should_stimulate():
+                i_stimulation = protocol.STIM_AMPLITUDE_AMPS / self.cm_farad
+            else:
+                i_stimulation = 0.0
+
+            d_y[0] += i_stimulation
+            return d_y
+
+        return stochastic_pacing
 
     def generate_voltage_clamp_function(self, protocol):
 
@@ -124,46 +168,20 @@ class PaciModel:
 
         return voltage_clamp
 
-    def generate_stochastic_pacing_function(self, protocol):
-        def stochastic_pacing(t, y):
-            d_y = self.action_potential_diff_eq(t, y)
-
-            stim_amplitude_amps = 7.5e-10
-            stim_end_secs = 1000.0
-            stim_pulse_duration_secs = 0.005
-            stim_start_secs = 0.0
-            is_in_bounds = stim_start_secs <= t <= stim_end_secs
-
-            for i in protocol.stimulation_timestamps:
-                if 0 <= i - t <= stim_pulse_duration_secs:
-                    should_stimulate = True
-                    break
-            else:
-                should_stimulate = False
-
-            if is_in_bounds and should_stimulate:
-                i_stimulation = stim_amplitude_amps / self.cm_farad
-            else:
-                i_stimulation = 0.0
-
-            d_y[0] += i_stimulation
-            return d_y
-
-        return stochastic_pacing
-
     def action_potential_diff_eq(self, t, y):
-        d_y = np.empty(24)  # Added current as index 23
+        # Added current as index 23, and diastolic start times as index 24,
+        # and will save stochastic pacing offsets in index 25
+        d_y = np.empty(24)
 
         # Nernst potential
-        e_na = self.r_joule_per_mole_kelvin *\
+        e_na = self.r_joule_per_mole_kelvin * \
                self.t_kelvin / self.f_coulomb_per_mole * log(
             self.nao_millimolar / y[17])
-        if self.cao_millimolar <= 0:
-            print('C: {}'.format(self.cao_millimolar))
 
         if y[2] <= 0:
             print(y[2])
-        e_ca = 0.5 * self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(self.cao_millimolar / y[2])
+        e_ca = 0.5 * self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
+            self.cao_millimolar / y[2])
 
         e_k = self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
             self.ko_millimolar / self.ki_millimolar)
@@ -173,13 +191,16 @@ class PaciModel:
                     self.ki_millimolar + pk_na * y[17]))
 
         # iNa
-        i_na = ((t < self.t_drug_application) * 1 + (t >= self.t_drug_application)
-                * self.i_na_f_red_med) * self.default_parameters['g_na'] * y[13] ** 3.0 * y[11] * y[12] * \
+        i_na = ((t < self.t_drug_application) * 1 + (
+                    t >= self.t_drug_application)
+                * self.i_na_f_red_med) * self.default_parameters['g_na'] * y[
+                   13] ** 3.0 * y[11] * y[12] * \
                (y[0] - e_na)
 
         h_inf = 1.0 / sqrt(1.0 + np.exp((y[0] * 1000.0 + 72.1) / 5.7))
         alpha_h = 0.057 * np.exp(-(y[0] * 1000.0 + 80.0) / 6.8)
-        beta_h = 2.7 * np.exp(0.079 * y[0] * 1000.0) + 3.1 * 10.0 ** 5.0 * np.exp(
+        beta_h = 2.7 * np.exp(
+            0.079 * y[0] * 1000.0) + 3.1 * 10.0 ** 5.0 * np.exp(
             0.3485 * y[0] * 1000.0)
         if y[0] < -0.0385:
             tau_h = 1.5 / ((alpha_h + beta_h) * 1000.0)
@@ -193,7 +214,7 @@ class PaciModel:
             alpha_j = (-25428.0 * np.exp(
                 0.2444 * y[0] * 1000.0) - 6.948 * 10.0 ** -6.0
                        * np.exp(-0.04391 * y[0] * 1000.0)) * (
-                                  y[0] * 1000.0 + 37.78) \
+                              y[0] * 1000.0 + 37.78) \
                       / (1.0 + np.exp(0.311 * (y[0] * 1000.0 + 79.23)))
         else:
             alpha_j = 0.0
@@ -208,7 +229,8 @@ class PaciModel:
         tau_j = 7.0 / ((alpha_j + beta_j) * 1000.0)
         d_y[12] = (j_inf - y[12]) / tau_j
 
-        m_inf = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 34.1) / 5.9)) ** (1.0 / 3.0)
+        m_inf = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 34.1) / 5.9)) ** (
+                    1.0 / 3.0)
         alpha_m = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 60.0) / 5.0))
         beta_m = 0.1 / (1.0 + np.exp((y[0] * 1000.0 + 35.0) / 5.0)) + 0.1 / (
                 1.0 + np.exp((y[0] * 1000.0 - 50.0) / 200.0))
@@ -219,7 +241,8 @@ class PaciModel:
         my_coef_tau_m = 1
         tau_i_na_l_ms = 200
         vh_h_late = 87.61
-        i_na_l = self.default_parameters['g_na_lmax'] * y[18] ** 3 * y[19] * (y[0] - e_na)
+        i_na_l = self.default_parameters['g_na_lmax'] * y[18] ** 3 * y[19] * (
+                    y[0] - e_na)
 
         m_inf_l = 1 / (1 + np.exp(-(y[0] * 1000 + 42.85) / 5.264))
         alpha_m_l = 1 / (1 + np.exp((-60 - y[0] * 1000) / 5))
@@ -235,21 +258,26 @@ class PaciModel:
         # i f
         e_f_volt = -0.017
         i_f = self.default_parameters['g_f_s_per_f'] * y[14] * (y[0] - e_f_volt)
-        i_f_na = 0.42 * self.default_parameters['g_f_s_per_f'] * y[14] * (y[0] - e_na)
+        i_f_na = 0.42 * self.default_parameters['g_f_s_per_f'] * y[14] * (
+                    y[0] - e_na)
 
         xf_infinity = 1.0 / (1.0 + np.exp((y[0] * 1000.0 + 77.85) / 5.0))
         tau_xf = 1900.0 / (1.0 + np.exp((y[0] * 1000.0 + 15.0) / 10.0)) / 1000.0
         d_y[14] = (xf_infinity - y[14]) / tau_xf
 
         # i CaL
-        i_ca_l = ((t < self.t_drug_application) * 1 + (t >= self.t_drug_application) *
-                  self.i_ca_l_red_med) * self.default_parameters['g_ca_l_meter_cube_per_f_per_s'] * 4.0 * y[0] \
+        i_ca_l = ((t < self.t_drug_application) * 1 + (
+                    t >= self.t_drug_application) *
+                  self.i_ca_l_red_med) * self.default_parameters[
+                     'g_ca_l_meter_cube_per_f_per_s'] * 4.0 * y[0] \
                  * self.f_coulomb_per_mole ** 2.0 / (
-                             self.r_joule_per_mole_kelvin * self.t_kelvin) * \
+                         self.r_joule_per_mole_kelvin * self.t_kelvin) * \
                  (y[2] * np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
                          self.r_joule_per_mole_kelvin * self.t_kelvin)) - 0.341 *
-                  self.cao_millimolar) / (np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
-                self.r_joule_per_mole_kelvin * self.t_kelvin)) - 1.0) * y[4] * y[5] * y[
+                  self.cao_millimolar) / (
+                             np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
+                                     self.r_joule_per_mole_kelvin * self.t_kelvin)) - 1.0) * \
+                 y[4] * y[5] * y[
                      6] * y[7]
 
         d_infinity = 1.0 / (1.0 + np.exp(-(y[0] * 1000.0 + 9.1) / 7.0))
@@ -267,15 +295,18 @@ class PaciModel:
 
         tau_f1 = (20.0 + 1102.5 * np.exp(
             -((y[0] * 1000.0 + 27.0) ** 2.0 / 15.0) ** 2.0) + 200.0 / (
-                          1.0 + np.exp((13.0 - y[0] * 1000.0) / 10.0)) + 180.0 / (
+                          1.0 + np.exp(
+                      (13.0 - y[0] * 1000.0) / 10.0)) + 180.0 / (
                           1.0 + np.exp(
                       (30.0 + y[0] * 1000.0) / 10.0))) * const_f1 / 1000.0
         d_y[5] = (f1_inf - y[5]) / tau_f1
 
         f2_inf = 0.33 + 0.67 / (1.0 + np.exp((y[0] * 1000.0 + 32.0) / 4.0))
         const_f2 = 1.0
-        tau_f2 = (600.0 * np.exp(-(y[0] * 1000.0 + 25.0) ** 2.0 / 170.0) + 31.0 / (
-                1.0 + np.exp((25.0 - y[0] * 1000.0) / 10.0)) + 16.0 / (1.0 + np.exp(
+        tau_f2 = (600.0 * np.exp(
+            -(y[0] * 1000.0 + 25.0) ** 2.0 / 170.0) + 31.0 / (
+                          1.0 + np.exp(
+                      (25.0 - y[0] * 1000.0) / 10.0)) + 16.0 / (1.0 + np.exp(
             (30.0 + y[0] * 1000.0) / 10.0))) * const_f2 / 1000.0
         d_y[6] = (f2_inf - y[6]) / tau_f2
 
@@ -308,8 +339,10 @@ class PaciModel:
         d_y[16] = (r_inf - y[16]) / tau_r
 
         # i Ks
-        i_ks = ((t < self.t_drug_application) * 1 + (t >= self.t_drug_application) *
-                self.i_ks_red_med) * self.default_parameters['g_ks_s_per_f'] * (y[0] - e_ks) * y[10] ** 2.0 * \
+        i_ks = ((t < self.t_drug_application) * 1 + (
+                    t >= self.t_drug_application) *
+                self.i_ks_red_med) * self.default_parameters['g_ks_s_per_f'] * (
+                           y[0] - e_ks) * y[10] ** 2.0 * \
                (1.0 + 0.6 / (1.0 + (3.8 * 0.00001 / y[2]) ** 1.4))
 
         xs_infinity = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 20.0) / 16.0))
@@ -322,8 +355,10 @@ class PaciModel:
         l0 = 0.025
         q = 2.3  # dimensionless (in i_Kr_Xr1_gate)
         i_kr = ((t < self.t_drug_application) * 1 + (
-                t >= self.t_drug_application) * self.i_kr_red_med) * self.default_parameters['g_kr_s_per_f']* (
-                       y[0] - e_k) * y[8] * y[9] * sqrt(self.ko_millimolar / 5.4)
+                t >= self.t_drug_application) * self.i_kr_red_med) * \
+               self.default_parameters['g_kr_s_per_f'] * (
+                       y[0] - e_k) * y[8] * y[9] * sqrt(
+            self.ko_millimolar / 5.4)
 
         v_half = 1000.0 * (-self.r_joule_per_mole_kelvin * self.t_kelvin / (
                 self.f_coulomb_per_mole * q) * log(
@@ -350,7 +385,8 @@ class PaciModel:
             0.5886 * (y[0] * 1000.0 - e_k * 1000.0 - 10.0))) / (
                           1.0 + np.exp(0.4547 * (y[0] * 1000.0 - e_k * 1000.0)))
         xk1_inf = alpha_k1 / (alpha_k1 + beta_k1)
-        i_k1 = self.default_parameters['g_k1_s_per_f'] * xk1_inf * (y[0] - e_k) * sqrt(self.ko_millimolar / 5.4)
+        i_k1 = self.default_parameters['g_k1_s_per_f'] * xk1_inf * (
+                    y[0] - e_k) * sqrt(self.ko_millimolar / 5.4)
 
         # i NaCa
         km_ca_millimolar = 1.38
@@ -425,7 +461,8 @@ class PaciModel:
 
         # i pCa
         kp_ca_millimolar = 0.0005
-        i_p_ca = self.default_parameters['g_p_ca'] * y[2] / (y[2] + kp_ca_millimolar)
+        i_p_ca = self.default_parameters['g_p_ca'] * y[2] / (
+                    y[2] + kp_ca_millimolar)
 
         # Background currents
         i_b_na = self.default_parameters['g_b_na'] * (y[0] - e_na)
@@ -493,7 +530,8 @@ class PaciModel:
                                      2.0 * self.vc_micrometer_cube *
                                      self.f_coulomb_per_mole * 1.0e-18))
         # Cai
-        d_y[1] = ca_sr_buf_sr * self.vc_micrometer_cube / self.v_sr_micrometer_cube * (
+        d_y[
+            1] = ca_sr_buf_sr * self.vc_micrometer_cube / self.v_sr_micrometer_cube * (
                 i_up - (i_rel + i_leak))
 
         # Membrane potential
@@ -510,12 +548,151 @@ class Trace:
     Attributes:
         t: A list of floats representing the time, in seconds.
         y: The membrane voltage, in volts, at a point in time.
+        stimulation_times: A IrregularPacingInfo object.
     """
 
-    def __init__(self, t, y):
+    def __init__(self, t, y, pacing_info=None):
         self.t = t
         self.y = y
+        self.pacing_info = pacing_info
 
     def __eq__(self, other):
         return np.allclose(self.t, other.t, atol=0.001) \
                and np.allclose(self.y[0], other.y[0], atol=0.001)
+
+    def plot_stimulation_times(self):
+        if not self.pacing_info :
+            raise Exception('Trace does not have stimulation times.')
+
+        self.pacing_info.plot_stimulation_times(self)
+
+    def plot_peaks(self):
+        if not self.pacing_info :
+            raise Exception('Trace does not have stimulation times.')
+
+        self.pacing_info.plot_peaks(self)
+
+    def plot_apd_ends(self):
+        if not self.pacing_info:
+            raise Exception('Trace does not have stimulation times.')
+
+        self.pacing_info.plot_apd_ends(self)
+
+    def plot(self):
+        plt.plot(self.t, self.y[0])
+
+
+class IrregularPacingInfo:
+
+    _STIMULATION_DURATION = 0.005
+    _PEAK_DETECTION_THRESHOLD = 0.025
+    _MIN_VOLT_DIFF = 0.00001
+    _PEAK_MIN_DIST = 1.5
+    AVG_AP_START_VOLTAGE = -0.075
+
+    def __init__(self):
+        self._d_y_voltage = []
+        self._y_voltage = []
+        self._t = []
+
+        self._peaks = []
+        self._stimulations = []
+        self._diastole_starts = []
+
+        # Set to -1 to indicate it has not yet been set.
+        self.apd_90_end_voltage = -1
+        self._apd_90s = []
+
+    def add_d_y_voltage(self, voltage):
+        self._d_y_voltage.append(voltage)
+
+    def add_t(self, t):
+        self._t.append(t)
+
+    def add_y_voltage(self, voltage):
+        self._y_voltage.append(voltage)
+
+    def add_peak(self, peak):
+        self._peaks.append(peak)
+
+    def add_stimulation_time(self, t):
+        self._stimulations.append(t)
+
+    def add_diastole_start(self, start):
+        self._diastole_starts.append(start)
+
+    def add_apd_90(self, apd_90):
+        self._apd_90s.append(apd_90)
+        self.apd_90_end_voltage = -1
+
+    def get_last_y(self):
+        if not self._y_voltage:
+            raise ValueError('No y voltages recorded.')
+        return self._y_voltage[-1]
+
+    def should_stimulate(self):
+        for i in range(len(self._stimulations)):
+            distance_from_stim = abs(self._stimulations[i] - self._t[-1])
+            if distance_from_stim < self._STIMULATION_DURATION:
+                return True
+        return False
+
+    def plot_stimulations(self, trace):
+        stimulation_y_values = _find_trace_y_values(
+            trace=trace,
+            timings=self._stimulations)
+        diastole_y_values = _find_trace_y_values(
+            trace=trace,
+            timings=self._stimulations)
+
+        sti = plt.scatter(self._stimulations, stimulation_y_values, c='red')
+        dia = plt.scatter(self._diastole_starts, diastole_y_values, c='green')
+        plt.legend(
+            (sti, dia),
+            ('Stimulation', 'Diastole Begins'),
+            loc='upper right')
+
+    def plot_peaks(self, trace):
+        peak_y_values = _find_trace_y_values(
+            trace=trace,
+            timings=self._peaks)
+
+        peaks = plt.scatter(self._peaks, peak_y_values, c='red')
+        plt.legend((peaks,), ('Peaks',), loc='upper right')
+
+    def plot_apd_ends(self, trace):
+        apd_end_y_values = _find_trace_y_values(
+            trace=trace,
+            timings=self._apd_90s)
+        apd_end = plt.scatter(
+            self._apd_90s,
+            apd_end_y_values,
+            c='orange')
+        plt.legend((apd_end,), ('APD 90',), loc='upper right')
+
+    def detect_peak(self):
+        # Skip check on first few points.
+        if len(self._t) < 2:
+            return False
+
+        if self._y_voltage[-1] < self._PEAK_DETECTION_THRESHOLD:
+            return False
+
+        if self._d_y_voltage[-2] > 0 and self._d_y_voltage[-1] <= 0:
+            if not (self._peaks and self._t[-1] - self._peaks[-1] < self._PEAK_MIN_DIST):
+                return True
+
+        return False
+
+    def detect_apd_90(self):
+        return self.apd_90_end_voltage != -1 and abs(
+            self.apd_90_end_voltage - self._y_voltage[-1]) < 0.0001
+
+
+def _find_trace_y_values(trace, timings):
+    y_values = []
+    for i in timings:
+        array = np.asarray(trace.t)
+        index = (np.abs(array - i)).argmin()
+        y_values.append(trace.y[0][index])
+    return y_values
