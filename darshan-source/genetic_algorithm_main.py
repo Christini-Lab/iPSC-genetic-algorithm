@@ -1,5 +1,8 @@
 from absl import app
 from matplotlib import pyplot as plt
+from numpy.polynomial import Polynomial
+
+import numpy as np
 
 import ga_config
 import genetic_algorithm
@@ -22,14 +25,10 @@ def main(unused_argv):
     # generation of the genetic algorithm.
     parameters.sort(key=lambda x: x.name)
 
-    irregular_pacing_protocol = irregular_pacing.IrregularPacingProtocol(
-        duration=6,
-        stimulation_offsets=[0.2, 0.5, 0.1, 0.3])
-
     config = ga_config.GeneticAlgorithmConfig(
-        population_size=10,
-        max_generations=10,
-        protocol=irregular_pacing_protocol,
+        population_size=2,
+        max_generations=2,
+        protocol=single_action_potential.SingleActionPotentialProtocol(),
         tunable_parameters=parameters,
         params_lower_bound=0.5,
         params_upper_bound=1.5,
@@ -39,14 +38,6 @@ def main(unused_argv):
         tournament_size=2)
 
     ga_result = genetic_algorithm.GeneticAlgorithm(config=config).run()
-    ga_result.generate_heatmap()
-
-    ga_result.graph_error_over_generation()
-
-    for i in range(ga_result.config.max_generations):
-        print('Generation: {}'.format(i))
-        individual = ga_result.get_best_individual(i)
-        ga_result.graph_individual_with_param_set(individual=individual)
 
 
 if __name__ == '__main__':

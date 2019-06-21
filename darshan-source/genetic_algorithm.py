@@ -20,7 +20,6 @@ import scipy.interpolate
 import seaborn as sns
 
 import paci_2018
-from irregular_pacing import IrregularPacingProtocol
 
 
 class GeneticAlgorithm:
@@ -55,9 +54,7 @@ class GeneticAlgorithm:
             initial_population.append(
                 Individual(
                     param_set=population[i][0],
-                    error=population[i].fitness.values[0],
-                    generation=0,
-                    index=i))
+                    error=population[i].fitness.values[0]))
         ga_result.generations.append(initial_population)
 
         for generation in range(1, self.config.max_generations):
@@ -96,9 +93,7 @@ class GeneticAlgorithm:
                 intermediate_population.append(
                     Individual(
                         param_set=population[i][0],
-                        error=population[i].fitness.values[0],
-                        generation=generation,
-                        index=i))
+                        error=population[i].fitness.values[0]))
             ga_result.generations.append(intermediate_population)
 
             _generate_statistics(population)
@@ -321,6 +316,8 @@ class GeneticAlgorithmResult:
         plt.figure()
         plt.subplot(1, 2, 1)
         trace = self.graph_individual(individual)
+        if trace.stimulation_times:
+            trace.plot_stimulation_times()
 
         plt.subplot(1, 2, 2)
         parameter_scaling = []
@@ -386,8 +383,6 @@ class Individual:
         error: The error compared to the target objective.
     """
 
-    def __init__(self, param_set, error, generation, index):
+    def __init__(self, param_set, error):
         self.param_set = param_set
         self.error = error
-        self.generation = generation
-        self.index = index
