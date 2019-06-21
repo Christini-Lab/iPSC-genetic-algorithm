@@ -7,7 +7,6 @@ Example usage:
 """
 import math
 import random
-import statistics
 
 from deap import base
 from deap import creator
@@ -219,8 +218,8 @@ def _generate_statistics(population):
     fitness_values = [i.fitness.values[0] for i in population]
     print('  Min error: {}'.format(min(fitness_values)))
     print('  Max error: {}'.format(max(fitness_values)))
-    print('  Average error: {}'.format(statistics.mean(fitness_values)))
-    print('  Standard deviation: {}'.format(statistics.stdev(fitness_values)))
+    print('  Average error: {}'.format(np.mean(fitness_values)))
+    print('  Standard deviation: {}'.format(np.std(fitness_values)))
 
 
 class GeneticAlgorithmResult:

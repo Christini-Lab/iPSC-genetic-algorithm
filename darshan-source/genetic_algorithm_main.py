@@ -1,12 +1,5 @@
-from matplotlib import pyplot as plt
-from numpy.polynomial import Polynomial
-
-import numpy as np
-
 import ga_config
 import genetic_algorithm
-import irregular_pacing
-import paci_2018
 import single_action_potential
 
 
@@ -28,8 +21,8 @@ def main():
     parameters.sort(key=lambda x: x.name)
 
     config = ga_config.GeneticAlgorithmConfig(
-        population_size=20,
-        max_generations=20,
+        population_size=2,
+        max_generations=2,
         protocol=single_action_potential.SingleActionPotentialProtocol(),
         tunable_parameters=parameters,
         params_lower_bound=0.1,
