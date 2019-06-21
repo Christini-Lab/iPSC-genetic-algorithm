@@ -10,7 +10,7 @@ import paci_2018
 import single_action_potential
 
 
-def main(unused_argv):
+def main():
     parameters = [
         ga_config.Parameter(name='g_na', default_value=3671.2302),
         ga_config.Parameter(name='g_f_s_per_f', default_value=30.10312),

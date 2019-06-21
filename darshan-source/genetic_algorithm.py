@@ -9,7 +9,6 @@ import math
 import random
 import statistics
 
-from absl import logging
 from deap import base
 from deap import creator
 from deap import tools
@@ -44,7 +43,7 @@ class GeneticAlgorithm:
             config=self.config,
             baseline_trace=self.baseline_trace)
 
-        logging.info('Evaluating initial population.')
+        print('Evaluating initial population.')
         for individual in population:
             individual.fitness.values = [toolbox.evaluate(self, individual[0])]
 
@@ -58,25 +57,25 @@ class GeneticAlgorithm:
         ga_result.generations.append(initial_population)
 
         for generation in range(1, self.config.max_generations):
-            logging.info('Generation %d', generation)
+            print('Generation {}'.format(generation))
             # Offspring are chosen through tournament selection. They are then
             # cloned, because they will be modified in-place later on.
             selected_offspring = toolbox.select(population, len(population))
             offspring = [toolbox.clone(i) for i in selected_offspring]
 
-            logging.info('Crossing over.')
+            print('Crossing over.')
             for i_one, i_two in zip(offspring[::2], offspring[1::2]):
                 if random.random() < self.config.crossover_probability:
                     toolbox.mate(self, i_one, i_two)
                     del i_one.fitness.values
                     del i_two.fitness.values
 
-            logging.info('Mutating.')
+            print('Mutating.')
             for i in offspring:
                 toolbox.mutate(self, i)
                 del i.fitness.values
 
-            logging.info('Updating fitness.')
+            print('Updating fitness.')
             # All individuals who were updated, either through crossover or
             # mutation, will be re-evaluated.
             updated_individuals = [i for i in offspring if not i.fitness.values]
