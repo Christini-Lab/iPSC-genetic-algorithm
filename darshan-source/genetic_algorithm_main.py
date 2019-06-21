@@ -1,4 +1,3 @@
-from absl import app
 from matplotlib import pyplot as plt
 from numpy.polynomial import Polynomial
 
@@ -47,4 +46,4 @@ def main(unused_argv):
 
 
 if __name__ == '__main__':
-    app.run(main)
+    main()
