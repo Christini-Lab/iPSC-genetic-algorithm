@@ -3,4 +3,6 @@
 
 class SingleActionPotentialProtocol:
     """Encapsulates state and behavior of a single action potential protocol."""
-    pass
+
+    AP_DURATION_SECS = 1.8
+

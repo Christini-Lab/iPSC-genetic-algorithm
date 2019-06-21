@@ -114,6 +114,10 @@ class GeneticAlgorithm:
 
     def _calculate_error(self, other_trace):
         """Calculates the error between given trace and baseline trace."""
+        # Individual could not produce valid trace
+        if not other_trace:
+            return self.config.MAX_ERROR
+
         err = 0
         base_interp = scipy.interpolate.interp1d(
             self.baseline_trace.t,
@@ -247,6 +251,19 @@ class GeneticAlgorithmResult:
                 min_error_individual = individual
         return min_error_individual
 
+    def get_worst_individual(self, generation):
+        """Given a generation, returns the individual with the most error."""
+        max_error = self.generations[generation][0].error
+        max_error_individual = self.get_individual(generation, 0)
+
+        for i in range(len(self.generations[generation])):
+            individual = self.get_individual(generation, i)
+            error = self.generations[generation][i].error
+            if error > max_error:
+                max_error = error
+                max_error_individual = individual
+        return max_error_individual
+
     def get_random_individual(self, generation):
         """Returns a random individual from the specified generation."""
         if len(self.generations) <= generation < 0:
@@ -316,7 +333,7 @@ class GeneticAlgorithmResult:
         plt.figure()
         plt.subplot(1, 2, 1)
         trace = self.graph_individual(individual)
-        if trace.stimulation_times:
+        if trace.pacing_info:
             trace.plot_stimulation_times()
 
         plt.subplot(1, 2, 2)

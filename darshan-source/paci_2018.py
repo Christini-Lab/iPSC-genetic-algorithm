@@ -91,12 +91,15 @@ class PaciModel:
             time.
         """
         if isinstance(protocol, SingleActionPotentialProtocol):
-            solution = integrate.solve_ivp(
-                self.generate_single_action_potential_function(protocol),
-                [0, 2],
-                self.y_initial,
-                method='BDF',
-                max_step=1e-3)
+            try:
+                solution = integrate.solve_ivp(
+                    self.generate_single_action_potential_function(protocol),
+                    [0, protocol.AP_DURATION_SECS],
+                    self.y_initial,
+                    method='BDF',
+                    max_step=1e-3)
+            except ValueError:
+                return None
             return Trace(solution.t, solution.y)
         elif isinstance(protocol, IrregularPacingProtocol):
             pac_info = IrregularPacingInfo()
@@ -174,8 +177,6 @@ class PaciModel:
         e_na = self.r_joule_per_mole_kelvin * \
                self.t_kelvin / self.f_coulomb_per_mole * log(
             self.nao_millimolar / y[17])
-        if self.cao_millimolar <= 0:
-            print('C: {}'.format(self.cao_millimolar))
 
         if y[2] <= 0:
             print(y[2])

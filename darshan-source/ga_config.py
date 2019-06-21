@@ -42,6 +42,8 @@ class GeneticAlgorithmConfig:
             tournament selection.
     """
 
+    MAX_ERROR = 4
+
     def __init__(self, population_size, max_generations, protocol,
                  tunable_parameters, params_lower_bound,
                  params_upper_bound, crossover_probability,
