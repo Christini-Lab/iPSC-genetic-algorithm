@@ -8,6 +8,8 @@ from irregular_pacing import IrregularPacingProtocol
 from single_action_potential import SingleActionPotentialProtocol
 from voltage_clamp import VoltageClampProtocol
 
+_CURRENT_Y_INDEX = 23
+
 
 class PaciModel:
     """An implementation of the Paci2018 model by Paci et al.
@@ -58,14 +60,6 @@ class PaciModel:
     i_kr_red_med = 1
     i_ks_red_med = 1
 
-    # Tunable parameters
-    default_parameters = {'g_na': 3671.2302,
-                          'g_ca_l': 8.635702e-5,
-                          'g_f_s': 30.10312, 'g_ks_s': 2.041,
-                          'g_kr_s': 29.8667, 'g_k1_s': 28.1492,
-                          'g_p_ca': 0.4125, 'g_b_na': 0.95, 'g_b_ca': 0.727272,
-                          'g_na_lmax': 17.25}
-
     y_initial = [-0.0749228904740065, 0.0936532528714175, 3.79675694306440e-05,
                  0, 8.25220533963093e-05, 0.741143500777858, 0.999983958619179,
                  0.997742015033076, 0.266113517200784, 0.434907203275640,
@@ -76,6 +70,12 @@ class PaciModel:
                  0.0785849084330126, 0]  # Added zero here for current
 
     def __init__(self, updated_parameters=dict()):
+        self.default_parameters = {'g_na': 3671.2302, 'g_ca_l': 8.635702e-5,
+                                   'g_f_s': 30.10312, 'g_ks_s': 2.041,
+                                   'g_kr_s': 29.8667, 'g_k1_s': 28.1492,
+                                   'g_p_ca': 0.4125, 'g_b_na': 0.95,
+                                   'g_b_ca': 0.727272,
+                                   'g_na_lmax': 17.25}
         self.default_parameters.update(updated_parameters)
         self.updated_parameters = updated_parameters
 
@@ -113,8 +113,11 @@ class PaciModel:
                 return None
             return Trace(solution.t, solution.y, pacing_info=pac_info)
         elif isinstance(protocol, VoltageClampProtocol):
+            current_response_info = CurrentResponseInfo()
             solution = integrate.solve_ivp(
-                self.generate_voltage_clamp_function(protocol),
+                self.generate_voltage_clamp_function(
+                    protocol,
+                    current_response_info),
                 [0, protocol.voltage_change_endpoints[-1]],
                 self.y_initial,
                 method='BDF',
@@ -162,10 +165,11 @@ class PaciModel:
 
         return irregular_pacing
 
-    def generate_voltage_clamp_function(self, protocol):
+    def generate_voltage_clamp_function(self, protocol, current_response_info):
 
         def voltage_clamp(t, y):
             y[0] = protocol.get_voltage_at_time(t)
+
             return self.action_potential_diff_eq(t, y)
 
         return voltage_clamp
@@ -180,8 +184,6 @@ class PaciModel:
                self.t_kelvin / self.f_coulomb_per_mole * log(
             self.nao_millimolar / y[17])
 
-        if y[2] <= 0:
-            print(y[2])
         e_ca = 0.5 * self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
             self.cao_millimolar / y[2])
 
@@ -583,6 +585,15 @@ class Trace:
     def plot(self):
         plt.plot(self.t, self.y[0])
 
+    def plot_voltage_clamp(self):
+        voltage_line, = plt.plot(self.t, self.y[0], label='Voltage')
+        current_line, = plt.plot(self.t, self.y[_CURRENT_Y_INDEX],
+                                label='Current')
+        hfont = {'fontname': 'Helvetica'}
+        plt.xlabel('Time (s)', **hfont)
+
+        plt.legend(handles=[voltage_line, current_line])
+
 
 class IrregularPacingInfo:
 
@@ -689,6 +700,10 @@ class IrregularPacingInfo:
     def detect_apd_90(self):
         return self.apd_90_end_voltage != -1 and abs(
             self.apd_90_end_voltage - self._y_voltage[-1]) < 0.0001
+
+
+class CurrentResponseInfo:
+    pass
 
 
 def _find_trace_y_values(trace, timings):

@@ -62,19 +62,16 @@ class GeneticAlgorithm:
             selected_offspring = toolbox.select(population, len(population))
             offspring = [toolbox.clone(i) for i in selected_offspring]
 
-            print('Crossing over.')
             for i_one, i_two in zip(offspring[::2], offspring[1::2]):
                 if random.random() < self.config.crossover_probability:
                     toolbox.mate(self, i_one, i_two)
                     del i_one.fitness.values
                     del i_two.fitness.values
 
-            print('Mutating.')
             for i in offspring:
                 toolbox.mutate(self, i)
                 del i.fitness.values
 
-            print('Updating fitness.')
             # All individuals who were updated, either through crossover or
             # mutation, will be re-evaluated.
             updated_individuals = [i for i in offspring if not i.fitness.values]

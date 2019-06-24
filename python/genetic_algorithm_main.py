@@ -1,38 +1,39 @@
-import copy
-
-import seaborn as sns
 from matplotlib import pyplot as plt
-import pandas as pd
 import numpy as np
+import pandas as pd
+import seaborn as sns
 
 import ga_config
 import genetic_algorithm
+import paci_2018
 from single_action_potential import SingleActionPotentialProtocol
 from irregular_pacing import IrregularPacingProtocol
+from voltage_clamp import VoltageClampProtocol, VoltageClampSteps
 
 
-def run_experiment(config):
-    ga_result = genetic_algorithm.GeneticAlgorithm(config=config).run()
+def run_experiment(config, full_output=False):
+    ga = genetic_algorithm.GeneticAlgorithm(config=config)
+    ga_result = ga.run()
 
-    # ga_result.generate_heatmap()
-    # ga_result.graph_error_over_generation()
-    #
-    # random_0 = ga_result.get_random_individual(generation=0)
-    # worst_0 = ga_result.get_worst_individual(generation=0)
-    # best_0 = ga_result.get_best_individual(generation=0)
-    #
-    # print('Getting best individual from generation: {}'.format(
-    #     config.max_generations // 2))
-    # best_middle = ga_result.get_best_individual(
-    #     generation=config.max_generations // 2)
-    # best_end = ga_result.get_best_individual(
-    #     generation=config.max_generations - 1)
-    #
-    # ga_result.graph_individual_with_param_set(individual=random_0)
-    # ga_result.graph_individual_with_param_set(individual=worst_0)
-    # ga_result.graph_individual_with_param_set(individual=best_0)
-    # ga_result.graph_individual_with_param_set(individual=best_middle)
-    # ga_result.graph_individual_with_param_set(individual=best_end)
+    if full_output:
+        ga_result.generate_heatmap()
+        ga_result.graph_error_over_generation()
+
+        random_0 = ga_result.get_random_individual(generation=0)
+        worst_0 = ga_result.get_worst_individual(generation=0)
+        best_0 = ga_result.get_best_individual(generation=0)
+
+        print('Getting best individual from generation: {}'.format(
+            config.max_generations // 2))
+        best_middle = ga_result.get_best_individual(
+            generation=config.max_generations // 2)
+        best_end = ga_result.get_best_individual(
+            generation=config.max_generations - 1)
+        ga_result.graph_individual_with_param_set(individual=random_0)
+        ga_result.graph_individual_with_param_set(individual=worst_0)
+        ga_result.graph_individual_with_param_set(individual=best_0)
+        ga_result.graph_individual_with_param_set(individual=best_middle)
+        ga_result.graph_individual_with_param_set(individual=best_end)
     return ga_result
 
 
@@ -44,8 +45,10 @@ def generate_parameter_scaling_figure(sap_results, ip_results):
     sap_scalings = []
     ip_scalings = []
     for i in range(results_count):
-        sap_scalings.append(_get_best_individuals_param_scaling(sap_results[i]))
-        ip_scalings.append(_get_best_individuals_param_scaling(ip_results[i]))
+        best_ind_sap = _get_best_individual(sap_results[i])
+        sap_scalings.append(sap_results[i].get_parameter_scales(best_ind_sap))
+        best_ind_ip = _get_best_individual(ip_results[i])
+        ip_scalings.append(ip_results[i].get_parameter_scales(best_ind_ip))
 
     tunable_params = sap_results[0].config.tunable_parameters
     sap_examples = _make_parameter_scaling_examples(
@@ -59,21 +62,50 @@ def generate_parameter_scaling_figure(sap_results, ip_results):
 
     param_example_df = pd.DataFrame(
         np.array(sap_examples + ip_examples),
-        columns=['Parameter Value', 'Parameter Type', 'Protocol Type'])
+        columns=['Parameter Scaling', 'Parameter', 'Protocol Type'])
     # Convert parameter value column, which is defaulted to object, to numeric
     # type.
-    param_example_df['Parameter Value'] = pd.to_numeric(
-        param_example_df['Parameter Value'])
+    param_example_df['Parameter Scaling'] = pd.to_numeric(
+        param_example_df['Parameter Scaling'])
 
+    plt.figure()
     ax = sns.stripplot(
-        x='Parameter Type',
-        y='Parameter Value',
+        x='Parameter',
+        y='Parameter Scaling',
         hue='Protocol Type',
         data=param_example_df,
-        palette="Set2",
+        palette='Set2',
         dodge=True)
     for i in range(0, len(tunable_params), 2):
         ax.axvspan(i + 0.5, i + 1.5, facecolor='lightgrey', alpha=0.3)
+
+
+def generate_error_strip_plot(dataframe):
+    plt.figure()
+    sns.stripplot(
+        x='Protocol Type',
+        y='Error',
+        data=dataframe,
+        palette='Set2')
+
+
+def _generate_error_strip_plot_data_frame(sap_results, ip_results):
+    errors_sap = []
+    for i in sap_results:
+        errors_sap.append(_get_best_individual(i).error)
+
+    errors_ip = []
+    for i in ip_results:
+        errors_ip.append(_get_best_individual(i).error)
+
+    df_data_dict = dict()
+    df_data_dict['Error'] = errors_sap + errors_ip
+    df_data_dict['Protocol Type'] = [
+        'Single AP' for _ in range(len(errors_sap))
+    ] + [
+        'Irregular Pacing' for _ in range(len(errors_ip))
+    ]
+    return pd.DataFrame(df_data_dict)
 
 
 def _make_parameter_scaling_examples(params, protocol_type, default_params):
@@ -84,10 +116,62 @@ def _make_parameter_scaling_examples(params, protocol_type, default_params):
     return examples
 
 
-def _get_best_individuals_param_scaling(ga_result):
-    best_individual = ga_result.get_best_individual(
+def _get_best_individual(ga_result):
+    return ga_result.get_best_individual(
         generation=ga_result.config.max_generations - 1)
-    return ga_result.get_parameter_scales(individual=best_individual)
+
+
+def run_comparison_experiment(sap_config, ip_config, iterations):
+    sap_results = []
+    for i in range(iterations):
+        print('Running SAP GA iteration: {}'.format(i))
+        sap_results.append(run_experiment(sap_config))
+
+    ip_results = []
+    for i in range(iterations):
+        print('Running IP GA iteration: {}'.format(i))
+        ip_results.append(run_experiment(ip_config))
+
+    generate_parameter_scaling_figure(
+        sap_results=sap_results,
+        ip_results=ip_results)
+    plt.show()
+    generate_error_strip_plot(
+        _generate_error_strip_plot_data_frame(
+            sap_results=sap_results,
+            ip_results=ip_results))
+    plt.show()
+
+
+def plot_baseline_irregular_pacing_trace():
+    test_model = paci_2018.PaciModel()
+    test_trace = test_model.generate_response(
+        protocol=IrregularPacingProtocol(
+            duration=10,
+            stimulation_offsets=[0.6, 0.4, 1., 0.1, 0.2, 0.0, 0.8, 0.9]))
+    test_trace.plot()
+    test_trace.plot_apd_ends()
+    test_trace.plot_peaks()
+    plt.show()
+
+
+def plot_baseline_voltage_clamp_trace():
+    test_model = paci_2018.PaciModel()
+
+    steps = [
+        VoltageClampSteps(duration=0.1, voltage=-0.08),
+        VoltageClampSteps(duration=0.1, voltage=-0.12),
+        VoltageClampSteps(duration=0.5, voltage=-0.06),
+        VoltageClampSteps(duration=0.05, voltage=-0.04),
+        VoltageClampSteps(duration=0.15, voltage=0.02),
+        VoltageClampSteps(duration=0.025, voltage=-0.08),
+        VoltageClampSteps(duration=0.3, voltage=0.04),
+    ]
+
+    test_trace = test_model.generate_response(
+        protocol=VoltageClampProtocol(steps=steps))
+    test_trace.plot_voltage_clamp()
+    plt.show()
 
 
 def main():
@@ -109,7 +193,7 @@ def main():
 
     sap_config = ga_config.GeneticAlgorithmConfig(
         population_size=2,
-        max_generations=1,
+        max_generations=2,
         protocol=SingleActionPotentialProtocol(),
         tunable_parameters=parameters,
         params_lower_bound=0.9,
@@ -119,11 +203,9 @@ def main():
         gene_mutation_probability=0.1,
         tournament_size=2)
 
-    single_ap_result = run_experiment(config=sap_config)
-
     ip_config = ga_config.GeneticAlgorithmConfig(
         population_size=2,
-        max_generations=1,
+        max_generations=2,
         protocol=IrregularPacingProtocol(
             duration=10,
             stimulation_offsets=[0.6, 0.4, 1., 0.1, 0.2, 0.0, 0.8, 0.9]),
@@ -134,13 +216,6 @@ def main():
         parameter_swap_probability=0.5,
         gene_mutation_probability=0.1,
         tournament_size=2)
-
-    irregular_pacing_result = run_experiment(config=ip_config)
-
-    generate_parameter_scaling_figure(
-        [single_ap_result],
-        [irregular_pacing_result])
-    plt.show()
 
 
 if __name__ == '__main__':
