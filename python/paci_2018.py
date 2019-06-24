@@ -1,5 +1,4 @@
 from math import log, sqrt
-import statistics
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -61,9 +60,9 @@ class PaciModel:
 
     # Tunable parameters
     default_parameters = {'g_na': 3671.2302,
-                          'g_ca_l_meter_cube_per_f_per_s': 8.635702e-5,
-                          'g_f_s_per_f': 30.10312, 'g_ks_s_per_f': 2.041,
-                          'g_kr_s_per_f': 29.8667, 'g_k1_s_per_f': 28.1492,
+                          'g_ca_l': 8.635702e-5,
+                          'g_f_s': 30.10312, 'g_ks_s': 2.041,
+                          'g_kr_s': 29.8667, 'g_k1_s': 28.1492,
                           'g_p_ca': 0.4125, 'g_b_na': 0.95, 'g_b_ca': 0.727272,
                           'g_na_lmax': 17.25}
 
@@ -103,12 +102,15 @@ class PaciModel:
             return Trace(solution.t, solution.y)
         elif isinstance(protocol, IrregularPacingProtocol):
             pac_info = IrregularPacingInfo()
-            solution = integrate.solve_ivp(
-                self.generate_irregular_pacing_function(protocol, pac_info),
-                [0, protocol.duration],
-                self.y_initial,
-                method='BDF',
-                max_step=1e-3)
+            try:
+                solution = integrate.solve_ivp(
+                    self.generate_irregular_pacing_function(protocol, pac_info),
+                    [0, protocol.duration],
+                    self.y_initial,
+                    method='BDF',
+                    max_step=1e-3)
+            except ValueError:
+                return None
             return Trace(solution.t, solution.y, pacing_info=pac_info)
         elif isinstance(protocol, VoltageClampProtocol):
             solution = integrate.solve_ivp(
@@ -130,7 +132,7 @@ class PaciModel:
     def generate_irregular_pacing_function(self, protocol, pac_info):
         offset_times = protocol.make_offset_generator()
 
-        def stochastic_pacing(t, y):
+        def irregular_pacing(t, y):
             d_y = self.action_potential_diff_eq(t, y)
             pac_info.add_d_y_voltage(d_y[0])
             pac_info.add_y_voltage(y[0])
@@ -158,7 +160,7 @@ class PaciModel:
             d_y[0] += i_stimulation
             return d_y
 
-        return stochastic_pacing
+        return irregular_pacing
 
     def generate_voltage_clamp_function(self, protocol):
 
@@ -257,8 +259,8 @@ class PaciModel:
 
         # i f
         e_f_volt = -0.017
-        i_f = self.default_parameters['g_f_s_per_f'] * y[14] * (y[0] - e_f_volt)
-        i_f_na = 0.42 * self.default_parameters['g_f_s_per_f'] * y[14] * (
+        i_f = self.default_parameters['g_f_s'] * y[14] * (y[0] - e_f_volt)
+        i_f_na = 0.42 * self.default_parameters['g_f_s'] * y[14] * (
                     y[0] - e_na)
 
         xf_infinity = 1.0 / (1.0 + np.exp((y[0] * 1000.0 + 77.85) / 5.0))
@@ -269,7 +271,7 @@ class PaciModel:
         i_ca_l = ((t < self.t_drug_application) * 1 + (
                     t >= self.t_drug_application) *
                   self.i_ca_l_red_med) * self.default_parameters[
-                     'g_ca_l_meter_cube_per_f_per_s'] * 4.0 * y[0] \
+                     'g_ca_l'] * 4.0 * y[0] \
                  * self.f_coulomb_per_mole ** 2.0 / (
                          self.r_joule_per_mole_kelvin * self.t_kelvin) * \
                  (y[2] * np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
@@ -341,7 +343,7 @@ class PaciModel:
         # i Ks
         i_ks = ((t < self.t_drug_application) * 1 + (
                     t >= self.t_drug_application) *
-                self.i_ks_red_med) * self.default_parameters['g_ks_s_per_f'] * (
+                self.i_ks_red_med) * self.default_parameters['g_ks_s'] * (
                            y[0] - e_ks) * y[10] ** 2.0 * \
                (1.0 + 0.6 / (1.0 + (3.8 * 0.00001 / y[2]) ** 1.4))
 
@@ -356,7 +358,7 @@ class PaciModel:
         q = 2.3  # dimensionless (in i_Kr_Xr1_gate)
         i_kr = ((t < self.t_drug_application) * 1 + (
                 t >= self.t_drug_application) * self.i_kr_red_med) * \
-               self.default_parameters['g_kr_s_per_f'] * (
+               self.default_parameters['g_kr_s'] * (
                        y[0] - e_k) * y[8] * y[9] * sqrt(
             self.ko_millimolar / 5.4)
 
@@ -385,7 +387,7 @@ class PaciModel:
             0.5886 * (y[0] * 1000.0 - e_k * 1000.0 - 10.0))) / (
                           1.0 + np.exp(0.4547 * (y[0] * 1000.0 - e_k * 1000.0)))
         xk1_inf = alpha_k1 / (alpha_k1 + beta_k1)
-        i_k1 = self.default_parameters['g_k1_s_per_f'] * xk1_inf * (
+        i_k1 = self.default_parameters['g_k1_s'] * xk1_inf * (
                     y[0] - e_k) * sqrt(self.ko_millimolar / 5.4)
 
         # i NaCa

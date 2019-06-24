@@ -50,7 +50,7 @@ class GeneticAlgorithm:
         initial_population = []
         for i in range(len(population)):
             initial_population.append(
-                Individual(
+                IndividualResult(
                     param_set=population[i][0],
                     error=population[i].fitness.values[0]))
         ga_result.generations.append(initial_population)
@@ -89,7 +89,7 @@ class GeneticAlgorithm:
             intermediate_population = []
             for i in range(len(population)):
                 intermediate_population.append(
-                    Individual(
+                    IndividualResult(
                         param_set=population[i][0],
                         error=population[i].fitness.values[0]))
             ga_result.generations.append(intermediate_population)
@@ -230,11 +230,10 @@ class GeneticAlgorithmResult:
         baseline_trace: The baseline trace of the genetic algorithm run.
     """
 
-    generations = []
-
     def __init__(self, config, baseline_trace):
         self.config = config
         self.baseline_trace = baseline_trace
+        self.generations = []
 
     def get_best_individual(self, generation):
         """Given a generation, returns the individual with the least error."""
@@ -335,11 +334,7 @@ class GeneticAlgorithmResult:
             trace.plot_stimulation_times()
 
         plt.subplot(1, 2, 2)
-        parameter_scaling = []
-        for i in range(len(self.config.tunable_parameters)):
-            parameter_scaling.append(
-                individual.param_set[i] /
-                self.config.tunable_parameters[i].default_value)
+        parameter_scaling = self.get_parameter_scales(individual=individual)
         parameter_indices = [i for i in range(len(individual.param_set))]
 
         plt.barh(
@@ -352,6 +347,14 @@ class GeneticAlgorithmResult:
         plt.yticks(parameter_indices, parameter_indices)
         plt.xticks([i for i in range(4)], [i for i in range(4)])
         plt.show()
+
+    def get_parameter_scales(self, individual):
+        parameter_scaling = []
+        for i in range(len(self.config.tunable_parameters)):
+            parameter_scaling.append(
+                individual.param_set[i] /
+                self.config.tunable_parameters[i].default_value)
+        return parameter_scaling
 
     def graph_individual(self, individual):
         """Graphs an individual's trace."""
@@ -389,7 +392,7 @@ class GeneticAlgorithmResult:
         plt.show()
 
 
-class Individual:
+class IndividualResult:
     """Represents an individual in the population.
 
     Attributes:
@@ -401,3 +404,9 @@ class Individual:
     def __init__(self, param_set, error):
         self.param_set = param_set
         self.error = error
+
+    def __str__(self):
+        return ', '.join([str(i) for i in self.param_set])
+
+    def __repr__(self):
+        return ', '.join([str(i) for i in self.param_set])
