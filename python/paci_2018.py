@@ -1,7 +1,9 @@
+import collections
 from math import log, sqrt
 
 from matplotlib import pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy import integrate
 
 from irregular_pacing import IrregularPacingProtocol
@@ -69,15 +71,17 @@ class PaciModel:
                  0.0811507312565017, 0.0387066722172937, 0.0260449185736275,
                  0.0785849084330126, 0]  # Added zero here for current
 
-    def __init__(self, updated_parameters=dict()):
+    def __init__(self, updated_parameters=None):
         self.default_parameters = {'g_na': 3671.2302, 'g_ca_l': 8.635702e-5,
                                    'g_f_s': 30.10312, 'g_ks_s': 2.041,
                                    'g_kr_s': 29.8667, 'g_k1_s': 28.1492,
                                    'g_p_ca': 0.4125, 'g_b_na': 0.95,
                                    'g_b_ca': 0.727272,
                                    'g_na_lmax': 17.25}
-        self.default_parameters.update(updated_parameters)
-        self.updated_parameters = updated_parameters
+        if updated_parameters:
+            self.default_parameters.update(updated_parameters)
+            self.updated_parameters = updated_parameters
+        self.current_response_info = None
 
     def generate_response(self, protocol):
         """Returns a trace based on the specified target objective.
@@ -113,16 +117,17 @@ class PaciModel:
                 return None
             return Trace(solution.t, solution.y, pacing_info=pac_info)
         elif isinstance(protocol, VoltageClampProtocol):
-            current_response_info = CurrentResponseInfo()
+            self.current_response_info = CurrentResponseInfo(protocol=protocol)
             solution = integrate.solve_ivp(
-                self.generate_voltage_clamp_function(
-                    protocol,
-                    current_response_info),
+                self.generate_voltage_clamp_function(protocol),
                 [0, protocol.voltage_change_endpoints[-1]],
                 self.y_initial,
                 method='BDF',
                 max_step=1e-3)
-            return Trace(solution.t, solution.y)
+            return Trace(
+                solution.t,
+                solution.y,
+                current_response_info=self.current_response_info)
 
     def generate_single_action_potential_function(self, protocol):
         del protocol  # May be used later.
@@ -165,18 +170,18 @@ class PaciModel:
 
         return irregular_pacing
 
-    def generate_voltage_clamp_function(self, protocol, current_response_info):
+    def generate_voltage_clamp_function(self, protocol):
 
         def voltage_clamp(t, y):
             y[0] = protocol.get_voltage_at_time(t)
-
+            self.current_response_info.add_t(t=t)
+            self.current_response_info.add_y_voltage(y=y)
             return self.action_potential_diff_eq(t, y)
 
         return voltage_clamp
 
     def action_potential_diff_eq(self, t, y):
-        # Added current as index 23, and diastolic start times as index 24,
-        # and will save stochastic pacing offsets in index 25
+        # Added current as index 23
         d_y = np.empty(24)
 
         # Nernst potential
@@ -543,6 +548,25 @@ class PaciModel:
                    i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
         d_y[23] = (i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l
                    + i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
+
+        current_timestep = [
+            Current(name='i_k1', value=i_k1),
+            Current(name='i_to', value=i_to),
+            Current(name='i_kr', value=i_kr),
+            Current(name='i_ks', value=i_ks),
+            Current(name='i_ca_l', value=i_ca_l),
+            Current(name='i_na_k', value=i_na_k),
+            Current(name='i_na', value=i_na),
+            Current(name='i_na_l', value=i_na_l),
+            Current(name='i_na_ca', value=i_na_ca),
+            Current(name='i_p_ca', value=i_p_ca),
+            Current(name='i_f', value=i_f),
+            Current(name='i_b_na', value=i_b_na),
+            Current(name='i_b_ca', value=i_b_ca),
+        ]
+        self.current_response_info.add_currents_timestep(
+            current_timestep=current_timestep)
+
         return d_y
 
 
@@ -555,10 +579,11 @@ class Trace:
         stimulation_times: A IrregularPacingInfo object.
     """
 
-    def __init__(self, t, y, pacing_info=None):
+    def __init__(self, t, y, pacing_info=None, current_response_info=None):
         self.t = t
         self.y = y
         self.pacing_info = pacing_info
+        self.current_response_info = current_response_info
 
     def __eq__(self, other):
         return np.allclose(self.t, other.t, atol=0.001) \
@@ -586,6 +611,7 @@ class Trace:
         plt.plot(self.t, self.y[0])
 
     def plot_voltage_clamp(self):
+        # TODO remove 23 index and use current response object to get voltage
         voltage_line, = plt.plot(self.t, self.y[0], label='Voltage')
         current_line, = plt.plot(self.t, self.y[_CURRENT_Y_INDEX],
                                 label='Current')
@@ -702,14 +728,87 @@ class IrregularPacingInfo:
             self.apd_90_end_voltage - self._y_voltage[-1]) < 0.0001
 
 
+class Current:
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __str__(self):
+        return '{}: {}'.format(self.name, self.value)
+
+    def __repr__(self):
+        return '{}: {}'.format(self.name, self.value)
+
+
 class CurrentResponseInfo:
-    pass
+
+    def __init__(self, protocol=None):
+        self.protocol = protocol
+        self._currents = []
+        self._y_voltage = []
+        self._t = []
+
+    def add_currents_timestep(self, current_timestep):
+        self._currents.append(current_timestep)
+
+    def add_y_voltage(self, y):
+        self._y_voltage.append(y)
+
+    def add_t(self, t):
+        self._t.append(t)
+
+    def calc_frac_contribution_currents(self, start_t, end_t):
+        start_index = _find_closest_t_index(self._t, start_t)
+        end_index = _find_closest_t_index(self._t, end_t)
+
+        total_current_sum = 0
+        individual_sums = dict()
+        for i in range(start_index, end_index + 1, 1):
+            for j in self._currents[i]:
+                abs_j_value = abs(j.value)
+                total_current_sum += abs_j_value
+                if j.name in individual_sums:
+                    individual_sums[j.name] += abs_j_value
+                else:
+                    individual_sums[j.name] = abs_j_value
+
+        frac_sums = dict()
+        for name, value in individual_sums.items():
+            frac_sums[name] = value / total_current_sum
+
+        percent_contributions = []
+        parameter_names = []
+        for key, val in frac_sums.items():
+            parameter_names.append(key)
+            percent_contributions.append(val)
+
+        df = pd.DataFrame(
+            data={'Parameter': parameter_names,
+                  'Percent Contribution': percent_contributions})
+        df['Percent Contribution'] = pd.to_numeric(df['Percent Contribution'])
+        return df
+
+    def plot_current_contributions(self):
+        time_intervals = []
+        for i in self.protocol.steps:
+            time_intervals.append(
+                self.protocol.get_time_interval_for_voltage(i.voltage))
+        frac_contributions = [self.calc_frac_contribution_currents(*i)
+                              for i in time_intervals]
+        for i in frac_contributions:
+            i.plot.bar(x='Parameter', y='Percent Contribution')
+            plt.show()
 
 
 def _find_trace_y_values(trace, timings):
     y_values = []
     for i in timings:
         array = np.asarray(trace.t)
-        index = (np.abs(array - i)).argmin()
+        index = _find_closest_t_index(array, i)
         y_values.append(trace.y[0][index])
     return y_values
+
+
+def _find_closest_t_index(array, t):
+    return (np.abs(np.array(array) - t)).argmin()

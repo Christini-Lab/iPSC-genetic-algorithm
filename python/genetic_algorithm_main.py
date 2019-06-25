@@ -164,14 +164,12 @@ def plot_baseline_voltage_clamp_trace():
         VoltageClampSteps(duration=0.5, voltage=-0.06),
         VoltageClampSteps(duration=0.05, voltage=-0.04),
         VoltageClampSteps(duration=0.15, voltage=0.02),
-        VoltageClampSteps(duration=0.025, voltage=-0.08),
         VoltageClampSteps(duration=0.3, voltage=0.04),
     ]
 
     test_trace = test_model.generate_response(
         protocol=VoltageClampProtocol(steps=steps))
-    test_trace.plot_voltage_clamp()
-    plt.show()
+    test_trace.current_response_info.plot_current_contributions()
 
 
 def main():
@@ -216,6 +214,8 @@ def main():
         parameter_swap_probability=0.5,
         gene_mutation_probability=0.1,
         tournament_size=2)
+
+    plot_baseline_voltage_clamp_trace()
 
 
 if __name__ == '__main__':

@@ -1,62 +1,45 @@
-# import os
-# import unittest
-# import random
-#
-# import paci_2018
-# import ga_config
-#
-# TEST_DATA_DIR = 'test_data'
-# ORIGINAL_SAP = 'original_single_action_potential.txt'
-# ORIGINAL_SP = 'original_stochastic_pacing.txt'
-# ORIGINAL_VC = 'original_voltage_clamp.txt'
-#
-#
-# class TestPaci2018(unittest.TestCase):
-#
-#     def test_single_action_potential(self):
-#         expected_trace = _read_in_trace(os.path.join(ORIGINAL_SAP))
-#
-#         test_trace = paci_2018.PaciModel().generate_response(
-#             ga_config.SingleActionPotentialProtocol())
-#
-#         self.assertEqual(expected_trace, test_trace)
-#
-#     def test_voltage_clamp(self):
-#         expected_trace = _read_in_trace(ORIGINAL_VC)
-#
-#         steps = [
-#             ga_config.VoltageClampSteps(duration=0.1, voltage=-0.08),
-#             ga_config.VoltageClampSteps(duration=0.1, voltage=-0.12),
-#             ga_config.VoltageClampSteps(duration=0.5, voltage=-0.06),
-#             ga_config.VoltageClampSteps(duration=0.05, voltage=-0.04),
-#             ga_config.VoltageClampSteps(duration=0.15, voltage=0.02),
-#             ga_config.VoltageClampSteps(duration=0.025, voltage=-0.08),
-#             ga_config.VoltageClampSteps(duration=0.3, voltage=0.04),
-#         ]
-#         protocol = ga_config.VoltageClampProtocol(steps=steps)
-#         test_trace = paci_2018.PaciModel().generate_response(protocol=protocol)
-#
-#         self.assertEqual(expected_trace, test_trace)
-#
-#     def test_stochastic_pacing(self):
-#         expected_trace = _read_in_trace(ORIGINAL_SP)
-#
-#         random.seed(3)
-#         protocol = ga_config.StochasticPacingProtocol(duration=10, stimulations=4)
-#         test_trace = paci_2018.PaciModel().generate_response(protocol=protocol)
-#
-#         self.assertEqual(expected_trace, test_trace)
-#
-#
-# def _read_in_trace(filename, test_dir=TEST_DATA_DIR):
-#     expected_t = []
-#     expected_y = []
-#     with open(os.path.join(test_dir, filename), 'r') as f:
-#         for line in f:
-#             expected_t.append(float(line.split(',')[0]))
-#             expected_y.append(float(line.split(',')[1]))
-#     return paci_2018.Trace(expected_t, [expected_y])
-#
-#
-# if __name__ == '__main__':
-#     unittest.main()
+import unittest
+
+import pandas as pd
+
+import paci_2018
+
+
+class TestPaci2018(unittest.TestCase):
+
+    def test_add_currents_timestep(self):
+        current_response_info = paci_2018.CurrentResponseInfo()
+        timestep_1 = [paci_2018.Current(name='i_na', value=10),
+                      paci_2018.Current(name='i_ka', value=-1)]
+        timestep_2 = [paci_2018.Current(name='i_na', value=3),
+                      paci_2018.Current(name='i_ka', value=-4)]
+        current_response_info.add_currents_timestep(timestep_1)
+        current_response_info.add_currents_timestep(timestep_2)
+
+        self.assertEqual(len(current_response_info._currents), 2)
+
+    def test_calc_frac_contribution_currents(self):
+        current_response_info = paci_2018.CurrentResponseInfo()
+        timestep_1 = [paci_2018.Current(name='i_na', value=2),
+                      paci_2018.Current(name='i_ka', value=8)]
+        timestep_2 = [paci_2018.Current(name='i_na', value=-2),
+                      paci_2018.Current(name='i_ka', value=2)]
+        timestep_3 = [paci_2018.Current(name='i_na', value=-2),
+                      paci_2018.Current(name='i_ka', value=4)]
+        current_response_info.add_currents_timestep(timestep_1)
+        current_response_info.add_currents_timestep(timestep_2)
+        current_response_info.add_currents_timestep(timestep_3)
+        current_response_info.add_t(t=0.5)
+        current_response_info.add_t(t=1.3)
+        current_response_info.add_t(t=2.7)
+        expected_dataframe = pd.DataFrame(data={'i_na': [.3], 'i_ka': [0.7]})
+
+        dataframe = current_response_info.calc_frac_contribution_currents(
+            start_t=0.5,
+            end_t=2.7)
+
+        pd.testing.assert_frame_equal(expected_dataframe, dataframe)
+
+
+if __name__ == '__main__':
+    unittest.main()
