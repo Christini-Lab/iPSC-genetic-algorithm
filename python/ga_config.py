@@ -65,8 +65,11 @@ class GeneticAlgorithmConfig:
     """
 
     # If a model with an individual's parameter set fails to generate a trace,
-    # the individual will have it's fitness set to MAX_ERROR.
-    MAX_ERROR = 130
+    # the individual will have it's fitness set to one of the following,
+    # according to the protocol.
+    SAP_MAX_ERROR = 100
+    IP_MAX_ERROR = 130
+    VC_MAX_ERROR = 130
 
     def __init__(self,
                  population_size: int,
@@ -110,3 +113,11 @@ class GeneticAlgorithmConfig:
                 self.gene_mutation_probability ==
                 other_config.gene_mutation_probability and
                 self.tournament_size == other_config.tournament_size)
+
+    def get_appropriate_max_error(self):
+        if isinstance(self.protocol, protocols.SingleActionPotentialProtocol):
+            return self.SAP_MAX_ERROR
+        elif isinstance(self.protocol, protocols.IrregularPacingProtocol):
+            return self.IP_MAX_ERROR
+        elif isinstance(self.protocol, protocols.VoltageClampProtocol):
+            return self.VC_MAX_ERROR

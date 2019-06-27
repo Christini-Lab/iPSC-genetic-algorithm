@@ -176,7 +176,16 @@ class GeneticAlgorithmResult:
 
         return trace
 
-    def graph_error_over_generation(self):
+    def plot_error_scatter(self):
+        x_data = []
+        y_data = []
+        for i in range(self.config.max_generations):
+            for j in range(self.config.population_size):
+                x_data.append(j)
+                y_data.append(self.get_individual(generation=i, index=j).error)
+        plt.scatter(x_data, y_data, alpha=0.3, color='red')
+
+    def graph_error_over_generation(self, with_scatter=False):
         """Graphs the change in error over generations."""
         mean_errors = []
         best_individual_errors = []
@@ -186,6 +195,8 @@ class GeneticAlgorithmResult:
             mean_errors.append(np.mean([j.error for j in self.generations[i]]))
 
         plt.figure()
+        if with_scatter:
+            self.plot_error_scatter()
         mean_error_line, = plt.plot(
             range(len(self.generations)),
             mean_errors,
@@ -194,7 +205,7 @@ class GeneticAlgorithmResult:
             range(len(self.generations)),
             best_individual_errors,
             label='Best Individual')
-        plt.xticks(range(0, len(self.generations), 2))
+        plt.xticks(range(len(self.generations)))
         hfont = {'fontname': 'Helvetica'}
         plt.xlabel('Generation', **hfont)
         plt.ylabel('Individual', **hfont)

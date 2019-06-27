@@ -108,7 +108,7 @@ class GeneticAlgorithm:
 
         # Individual could not produce valid trace
         if not trace:
-            return self.config.MAX_ERROR
+            return self.config.get_appropriate_max_error()
 
         error = 0
         # If a voltage clamp protocol was used, calculate error based on

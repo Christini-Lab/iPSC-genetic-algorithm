@@ -38,8 +38,8 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
 )
 
 SAP_CONFIG = ga_config.GeneticAlgorithmConfig(
-    population_size=2,
-    max_generations=2,
+    population_size=10,
+    max_generations=10,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.5,
@@ -63,10 +63,7 @@ IP_CONFIG = ga_config.GeneticAlgorithmConfig(
 
 
 def main():
-    experiments.run_sap_ip_comparison_experiment(
-        sap_config=SAP_CONFIG,
-        ip_config=IP_CONFIG,
-        iterations=2)
+    experiments.run_experiment(config=SAP_CONFIG, full_output=True)
 
 
 if __name__ == '__main__':
