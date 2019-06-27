@@ -1,16 +1,10 @@
-import collections
 from math import log, sqrt
 
-from matplotlib import pyplot as plt
 import numpy as np
-import pandas as pd
 from scipy import integrate
 
-from irregular_pacing import IrregularPacingProtocol
-from single_action_potential import SingleActionPotentialProtocol
-from voltage_clamp import VoltageClampProtocol
-
-_CURRENT_Y_INDEX = 23
+import protocols
+import trace
 
 
 class PaciModel:
@@ -69,7 +63,7 @@ class PaciModel:
                  0.0995891726023512, 0.0249102482276486, 0.841714924246004,
                  0.00558005376429710, 8.64821066193476, 0.00225383437957339,
                  0.0811507312565017, 0.0387066722172937, 0.0260449185736275,
-                 0.0785849084330126, 0]  # Added zero here for current
+                 0.0785849084330126]
 
     def __init__(self, updated_parameters=None):
         self.default_parameters = {'g_na': 3671.2302, 'g_ca_l': 8.635702e-5,
@@ -80,7 +74,9 @@ class PaciModel:
                                    'g_na_lmax': 17.25}
         if updated_parameters:
             self.default_parameters.update(updated_parameters)
-            self.updated_parameters = updated_parameters
+        self.t = []
+        self.y_voltage = []
+        self.d_y_voltage = []
         self.current_response_info = None
 
     def generate_response(self, protocol):
@@ -93,74 +89,74 @@ class PaciModel:
             A Trace object representing the change in membrane potential over
             time.
         """
-        if isinstance(protocol, SingleActionPotentialProtocol):
+        # Reset instance variables when model is run again.
+        self.t = []
+        self.y_voltage = []
+        self.d_y_voltage = []
+
+        if isinstance(protocol, protocols.SingleActionPotentialProtocol):
             try:
-                solution = integrate.solve_ivp(
-                    self.generate_single_action_potential_function(protocol),
+                integrate.solve_ivp(
+                    self.generate_single_action_potential_function(),
                     [0, protocol.AP_DURATION_SECS],
                     self.y_initial,
                     method='BDF',
                     max_step=1e-3)
             except ValueError:
                 return None
-            return Trace(solution.t, solution.y)
-        elif isinstance(protocol, IrregularPacingProtocol):
-            pac_info = IrregularPacingInfo()
-            try:
-                solution = integrate.solve_ivp(
-                    self.generate_irregular_pacing_function(protocol, pac_info),
-                    [0, protocol.duration],
-                    self.y_initial,
-                    method='BDF',
-                    max_step=1e-3)
-            except ValueError:
-                return None
-            return Trace(solution.t, solution.y, pacing_info=pac_info)
-        elif isinstance(protocol, VoltageClampProtocol):
-            self.current_response_info = CurrentResponseInfo(protocol=protocol)
-            solution = integrate.solve_ivp(
+            return trace.Trace(self.t, self.y_voltage)
+
+        elif isinstance(protocol, protocols.IrregularPacingProtocol):
+            pacing_info = trace.IrregularPacingInfo()
+            integrate.solve_ivp(
+                self.generate_irregular_pacing_function(
+                    protocol, pacing_info),
+                [0, protocol.duration],
+                self.y_initial,
+                method='BDF',
+                max_step=1e-3)
+            return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
+
+        elif isinstance(protocol, protocols.VoltageClampProtocol):
+            self.current_response_info = trace.CurrentResponseInfo(
+                protocol=protocol)
+            integrate.solve_ivp(
                 self.generate_voltage_clamp_function(protocol),
                 [0, protocol.voltage_change_endpoints[-1]],
                 self.y_initial,
                 method='BDF',
                 max_step=1e-3)
-            return Trace(
-                solution.t,
-                solution.y,
+            return trace.Trace(
+                self.t,
+                self.y_voltage,
                 current_response_info=self.current_response_info)
 
-    def generate_single_action_potential_function(self, protocol):
-        del protocol  # May be used later.
+    def generate_single_action_potential_function(self):
 
         def single_action_potential(t, y):
             return self.action_potential_diff_eq(t, y)
 
         return single_action_potential
 
-    def generate_irregular_pacing_function(self, protocol, pac_info):
+    def generate_irregular_pacing_function(self, protocol, pacing_info):
         offset_times = protocol.make_offset_generator()
 
         def irregular_pacing(t, y):
             d_y = self.action_potential_diff_eq(t, y)
-            pac_info.add_d_y_voltage(d_y[0])
-            pac_info.add_y_voltage(y[0])
-            pac_info.add_t(t)
 
-            if pac_info.detect_peak():
-                pac_info.add_peak(t)
-                voltage_diff = abs(
-                    pac_info.AVG_AP_START_VOLTAGE - pac_info.get_last_y())
-                pac_info.apd_90_end_voltage = \
-                    pac_info.get_last_y() - voltage_diff * 0.9
+            if pacing_info.detect_peak(self.t, y[0], self.d_y_voltage):
+                pacing_info.peaks.append(t)
+                voltage_diff = abs(pacing_info.AVG_AP_START_VOLTAGE - y[0])
+                pacing_info.apd_90_end_voltage = y[0] - voltage_diff * 0.9
 
-            if pac_info.detect_apd_90():
+            if pacing_info.detect_apd_90(y[0]):
                 try:
-                    pac_info.add_stimulation_time(t + next(offset_times))
-                    pac_info.add_apd_90(t)
+                    pacing_info.add_apd_90(t)
+                    pacing_info.stimulations.append(t + next(offset_times))
                 except StopIteration:
                     pass
 
-            if pac_info.should_stimulate():
+            if pacing_info.should_stimulate(t):
                 i_stimulation = protocol.STIM_AMPLITUDE_AMPS / self.cm_farad
             else:
                 i_stimulation = 0.0
@@ -174,15 +170,15 @@ class PaciModel:
 
         def voltage_clamp(t, y):
             y[0] = protocol.get_voltage_at_time(t)
-            self.current_response_info.add_t(t=t)
-            self.current_response_info.add_y_voltage(y=y)
             return self.action_potential_diff_eq(t, y)
 
         return voltage_clamp
 
     def action_potential_diff_eq(self, t, y):
-        # Added current as index 23
-        d_y = np.empty(24)
+        self.y_voltage.append(y[0])
+        self.t.append(t)
+
+        d_y = np.empty(23)
 
         # Nernst potential
         e_na = self.r_joule_per_mole_kelvin * \
@@ -546,269 +542,47 @@ class PaciModel:
         # Membrane potential
         d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l +
                    i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
-        d_y[23] = (i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l
-                   + i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
 
-        current_timestep = [
-            Current(name='i_k1', value=i_k1),
-            Current(name='i_to', value=i_to),
-            Current(name='i_kr', value=i_kr),
-            Current(name='i_ks', value=i_ks),
-            Current(name='i_ca_l', value=i_ca_l),
-            Current(name='i_na_k', value=i_na_k),
-            Current(name='i_na', value=i_na),
-            Current(name='i_na_l', value=i_na_l),
-            Current(name='i_na_ca', value=i_na_ca),
-            Current(name='i_p_ca', value=i_p_ca),
-            Current(name='i_f', value=i_f),
-            Current(name='i_b_na', value=i_b_na),
-            Current(name='i_b_ca', value=i_b_ca),
-        ]
-        self.current_response_info.add_currents_timestep(
-            current_timestep=current_timestep)
+        if self.current_response_info:
+            current_timestep = [
+                trace.Current(name='i_k1', value=i_k1),
+                trace.Current(name='i_to', value=i_to),
+                trace.Current(name='i_kr', value=i_kr),
+                trace.Current(name='i_ks', value=i_ks),
+                trace.Current(name='i_ca_l', value=i_ca_l),
+                trace.Current(name='i_na_k', value=i_na_k),
+                trace.Current(name='i_na', value=i_na),
+                trace.Current(name='i_na_l', value=i_na_l),
+                trace.Current(name='i_na_ca', value=i_na_ca),
+                trace.Current(name='i_p_ca', value=i_p_ca),
+                trace.Current(name='i_f', value=i_f),
+                trace.Current(name='i_b_na', value=i_b_na),
+                trace.Current(name='i_b_ca', value=i_b_ca),
+            ]
+            self.current_response_info.currents.append(current_timestep)
 
+        self.d_y_voltage.append(d_y[0])
         return d_y
 
 
-class Trace:
-    """Represents a `trace`, or the change in membrane potential over time.
+def generate_trace(config, params=None):
+    """Generates a trace given a set of parameters and config object.
 
-    Attributes:
-        t: A list of floats representing the time, in seconds.
-        y: The membrane voltage, in volts, at a point in time.
-        stimulation_times: A IrregularPacingInfo object.
+    Leave `params` argument empty if generating baseline trace with
+    default parameter values.
+
+    Args:
+        config: A configs.GeneticAlgorithmConfig object.
+        params: A set of parameter values (where order must match with ordered
+            labels in `config.tunable_parameters`).
+
+    Returns:
+        A Trace object.
     """
+    new_params = dict()
+    if params:
+        for i in range(len(params)):
+            new_params[config.tunable_parameters[i].name] = params[i]
 
-    def __init__(self, t, y, pacing_info=None, current_response_info=None):
-        self.t = t
-        self.y = y
-        self.pacing_info = pacing_info
-        self.current_response_info = current_response_info
-
-    def __eq__(self, other):
-        return np.allclose(self.t, other.t, atol=0.001) \
-               and np.allclose(self.y[0], other.y[0], atol=0.001)
-
-    def plot_stimulation_times(self):
-        if not self.pacing_info :
-            raise Exception('Trace does not have stimulation times.')
-
-        self.pacing_info.plot_stimulation_times(self)
-
-    def plot_peaks(self):
-        if not self.pacing_info :
-            raise Exception('Trace does not have stimulation times.')
-
-        self.pacing_info.plot_peaks(self)
-
-    def plot_apd_ends(self):
-        if not self.pacing_info:
-            raise Exception('Trace does not have stimulation times.')
-
-        self.pacing_info.plot_apd_ends(self)
-
-    def plot(self):
-        plt.plot(self.t, self.y[0])
-
-    def plot_voltage_clamp(self):
-        # TODO remove 23 index and use current response object to get voltage
-        voltage_line, = plt.plot(self.t, self.y[0], label='Voltage')
-        current_line, = plt.plot(self.t, self.y[_CURRENT_Y_INDEX],
-                                label='Current')
-        hfont = {'fontname': 'Helvetica'}
-        plt.xlabel('Time (s)', **hfont)
-
-        plt.legend(handles=[voltage_line, current_line])
-
-
-class IrregularPacingInfo:
-
-    _STIMULATION_DURATION = 0.005
-    _PEAK_DETECTION_THRESHOLD = 0.025
-    _MIN_VOLT_DIFF = 0.00001
-    _PEAK_MIN_DIST = 1.5
-    AVG_AP_START_VOLTAGE = -0.075
-
-    def __init__(self):
-        self._d_y_voltage = []
-        self._y_voltage = []
-        self._t = []
-
-        self._peaks = []
-        self._stimulations = []
-        self._diastole_starts = []
-
-        # Set to -1 to indicate it has not yet been set.
-        self.apd_90_end_voltage = -1
-        self._apd_90s = []
-
-    def add_d_y_voltage(self, voltage):
-        self._d_y_voltage.append(voltage)
-
-    def add_t(self, t):
-        self._t.append(t)
-
-    def add_y_voltage(self, voltage):
-        self._y_voltage.append(voltage)
-
-    def add_peak(self, peak):
-        self._peaks.append(peak)
-
-    def add_stimulation_time(self, t):
-        self._stimulations.append(t)
-
-    def add_diastole_start(self, start):
-        self._diastole_starts.append(start)
-
-    def add_apd_90(self, apd_90):
-        self._apd_90s.append(apd_90)
-        self.apd_90_end_voltage = -1
-
-    def get_last_y(self):
-        if not self._y_voltage:
-            raise ValueError('No y voltages recorded.')
-        return self._y_voltage[-1]
-
-    def should_stimulate(self):
-        for i in range(len(self._stimulations)):
-            distance_from_stim = abs(self._stimulations[i] - self._t[-1])
-            if distance_from_stim < self._STIMULATION_DURATION:
-                return True
-        return False
-
-    def plot_stimulations(self, trace):
-        stimulation_y_values = _find_trace_y_values(
-            trace=trace,
-            timings=self._stimulations)
-        diastole_y_values = _find_trace_y_values(
-            trace=trace,
-            timings=self._stimulations)
-
-        sti = plt.scatter(self._stimulations, stimulation_y_values, c='red')
-        dia = plt.scatter(self._diastole_starts, diastole_y_values, c='green')
-        plt.legend(
-            (sti, dia),
-            ('Stimulation', 'Diastole Begins'),
-            loc='upper right')
-
-    def plot_peaks(self, trace):
-        peak_y_values = _find_trace_y_values(
-            trace=trace,
-            timings=self._peaks)
-
-        peaks = plt.scatter(self._peaks, peak_y_values, c='red')
-        plt.legend((peaks,), ('Peaks',), loc='upper right')
-
-    def plot_apd_ends(self, trace):
-        apd_end_y_values = _find_trace_y_values(
-            trace=trace,
-            timings=self._apd_90s)
-        apd_end = plt.scatter(
-            self._apd_90s,
-            apd_end_y_values,
-            c='orange')
-        plt.legend((apd_end,), ('APD 90',), loc='upper right')
-
-    def detect_peak(self):
-        # Skip check on first few points.
-        if len(self._t) < 2:
-            return False
-
-        if self._y_voltage[-1] < self._PEAK_DETECTION_THRESHOLD:
-            return False
-
-        if self._d_y_voltage[-2] > 0 and self._d_y_voltage[-1] <= 0:
-            if not (self._peaks and self._t[-1] - self._peaks[-1] < self._PEAK_MIN_DIST):
-                return True
-
-        return False
-
-    def detect_apd_90(self):
-        return self.apd_90_end_voltage != -1 and abs(
-            self.apd_90_end_voltage - self._y_voltage[-1]) < 0.0001
-
-
-class Current:
-
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
-
-    def __str__(self):
-        return '{}: {}'.format(self.name, self.value)
-
-    def __repr__(self):
-        return '{}: {}'.format(self.name, self.value)
-
-
-class CurrentResponseInfo:
-
-    def __init__(self, protocol=None):
-        self.protocol = protocol
-        self._currents = []
-        self._y_voltage = []
-        self._t = []
-
-    def add_currents_timestep(self, current_timestep):
-        self._currents.append(current_timestep)
-
-    def add_y_voltage(self, y):
-        self._y_voltage.append(y)
-
-    def add_t(self, t):
-        self._t.append(t)
-
-    def calc_frac_contribution_currents(self, start_t, end_t):
-        start_index = _find_closest_t_index(self._t, start_t)
-        end_index = _find_closest_t_index(self._t, end_t)
-
-        total_current_sum = 0
-        individual_sums = dict()
-        for i in range(start_index, end_index + 1, 1):
-            for j in self._currents[i]:
-                abs_j_value = abs(j.value)
-                total_current_sum += abs_j_value
-                if j.name in individual_sums:
-                    individual_sums[j.name] += abs_j_value
-                else:
-                    individual_sums[j.name] = abs_j_value
-
-        frac_sums = dict()
-        for name, value in individual_sums.items():
-            frac_sums[name] = value / total_current_sum
-
-        percent_contributions = []
-        parameter_names = []
-        for key, val in frac_sums.items():
-            parameter_names.append(key)
-            percent_contributions.append(val)
-
-        df = pd.DataFrame(
-            data={'Parameter': parameter_names,
-                  'Percent Contribution': percent_contributions})
-        df['Percent Contribution'] = pd.to_numeric(df['Percent Contribution'])
-        return df
-
-    def plot_current_contributions(self):
-        time_intervals = []
-        for i in self.protocol.steps:
-            time_intervals.append(
-                self.protocol.get_time_interval_for_voltage(i.voltage))
-        frac_contributions = [self.calc_frac_contribution_currents(*i)
-                              for i in time_intervals]
-        for i in frac_contributions:
-            i.plot.bar(x='Parameter', y='Percent Contribution')
-            plt.show()
-
-
-def _find_trace_y_values(trace, timings):
-    y_values = []
-    for i in timings:
-        array = np.asarray(trace.t)
-        index = _find_closest_t_index(array, i)
-        y_values.append(trace.y[0][index])
-    return y_values
-
-
-def _find_closest_t_index(array, t):
-    return (np.abs(np.array(array) - t)).argmin()
+    return PaciModel(
+        updated_parameters=new_params).generate_response(config.protocol)

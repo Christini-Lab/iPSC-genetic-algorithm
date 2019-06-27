@@ -6,9 +6,7 @@ import seaborn as sns
 import ga_config
 import genetic_algorithm
 import paci_2018
-from single_action_potential import SingleActionPotentialProtocol
-from irregular_pacing import IrregularPacingProtocol
-from voltage_clamp import VoltageClampProtocol, VoltageClampSteps
+import protocols
 
 
 def run_experiment(config, full_output=False):
@@ -188,25 +186,24 @@ def main():
     # Parameters are sorted alphabetically to maintain order during each
     # generation of the genetic algorithm.
     parameters.sort(key=lambda x: x.name)
-
-    sap_config = ga_config.GeneticAlgorithmConfig(
-        population_size=2,
-        max_generations=2,
-        protocol=SingleActionPotentialProtocol(),
-        tunable_parameters=parameters,
-        params_lower_bound=0.9,
-        params_upper_bound=1.1,
-        crossover_probability=0.9,
-        parameter_swap_probability=0.5,
-        gene_mutation_probability=0.1,
-        tournament_size=2)
+    ip_protocol = protocols.IrregularPacingProtocol(
+            duration=10,
+            stimulation_offsets=[0.6, 0.4, 1., 0.1, 0.2, 0.0, 0.8, 0.9])
+    steps = [
+        protocols.VoltageClampStep(duration=0.1, voltage=-0.08),
+        protocols.VoltageClampStep(duration=0.1, voltage=-0.12),
+        protocols.VoltageClampStep(duration=0.5, voltage=-0.06),
+        protocols.VoltageClampStep(duration=0.05, voltage=-0.04),
+        protocols.VoltageClampStep(duration=0.15, voltage=0.02),
+        protocols.VoltageClampStep(duration=0.025, voltage=-0.08),
+        protocols.VoltageClampStep(duration=0.3, voltage=0.04),
+    ]
+    vc_protocol = protocols.VoltageClampProtocol(steps=steps)
 
     ip_config = ga_config.GeneticAlgorithmConfig(
         population_size=2,
         max_generations=2,
-        protocol=IrregularPacingProtocol(
-            duration=10,
-            stimulation_offsets=[0.6, 0.4, 1., 0.1, 0.2, 0.0, 0.8, 0.9]),
+        protocol=ip_protocol,
         tunable_parameters=parameters,
         params_lower_bound=0.9,
         params_upper_bound=1.1,
@@ -215,7 +212,11 @@ def main():
         gene_mutation_probability=0.1,
         tournament_size=2)
 
-    plot_baseline_voltage_clamp_trace()
+    test_model = paci_2018.PaciModel()
+    test_trace = test_model.generate_response(protocol=vc_protocol)
+    plt.plot(test_trace.t, test_trace.y)
+    plt.plot(test_trace.t, test_trace.current_response_info.get_current_summed())
+    plt.show()
 
 
 if __name__ == '__main__':

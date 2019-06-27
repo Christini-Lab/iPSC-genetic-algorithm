@@ -1,5 +1,14 @@
 """Contains classes used to configure the genetic algorithm."""
 
+from typing import List, Union
+import protocols
+
+PROTOCOL_TYPE = Union[
+    protocols.SingleActionPotentialProtocol,
+    protocols.IrregularPacingProtocol,
+    protocols.VoltageClampProtocol
+]
+
 
 class Parameter:
     """Represents a parameter in the model.
@@ -9,14 +18,15 @@ class Parameter:
         default_value: Default value of parameter.
     """
 
-    def __init__(self, name, default_value):
+    def __init__(self, name: str, default_value: float) -> None:
         self.name = name
+        # Do not change default value once set during init.
         self.default_value = default_value
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
 
@@ -48,13 +58,21 @@ class GeneticAlgorithmConfig:
             tournament selection.
     """
 
+    # If a model with an individual's parameter set fails to generate a trace,
+    # the individual will have it's fitness set to MAX_ERROR.
     MAX_ERROR = 4
 
-    def __init__(self, population_size, max_generations, protocol,
-                 tunable_parameters, params_lower_bound,
-                 params_upper_bound, crossover_probability,
-                 parameter_swap_probability, gene_mutation_probability,
-                 tournament_size):
+    def __init__(self,
+                 population_size: int,
+                 max_generations: int,
+                 protocol: PROTOCOL_TYPE,
+                 tunable_parameters: List[Parameter],
+                 params_lower_bound: float,
+                 params_upper_bound: float,
+                 crossover_probability: float,
+                 parameter_swap_probability: float,
+                 gene_mutation_probability: float,
+                 tournament_size: int) -> None:
         self.population_size = population_size
         self.max_generations = max_generations
         self.protocol = protocol
