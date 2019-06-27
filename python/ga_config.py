@@ -1,5 +1,7 @@
 """Contains classes used to configure the genetic algorithm."""
 
+from __future__ import annotations
+
 from typing import List, Union
 import protocols
 
@@ -28,6 +30,10 @@ class Parameter:
 
     def __repr__(self) -> str:
         return self.name
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
 
 
 class GeneticAlgorithmConfig:
@@ -60,7 +66,7 @@ class GeneticAlgorithmConfig:
 
     # If a model with an individual's parameter set fails to generate a trace,
     # the individual will have it's fitness set to MAX_ERROR.
-    MAX_ERROR = 4
+    MAX_ERROR = 130
 
     def __init__(self,
                  population_size: int,
@@ -83,3 +89,24 @@ class GeneticAlgorithmConfig:
         self.parameter_swap_probability = parameter_swap_probability
         self.gene_mutation_probability = gene_mutation_probability
         self.tournament_size = tournament_size
+
+    def has_equal_hyperparameters(self,
+                                other_config: GeneticAlgorithmConfig) -> bool:
+        """Checks if another config object has the same hyperparameters.
+
+        This is used when running comparisons between SAP and IP genetic
+        algorithms. Both configs should have the same hyperparameters, but will
+        differ in their protocol.
+        """
+        return (self.population_size == other_config.population_size and
+                self.max_generations == other_config.max_generations and
+                self.tunable_parameters == other_config.tunable_parameters and
+                self.params_lower_bound == other_config.params_lower_bound and
+                self.params_upper_bound == other_config.params_upper_bound and
+                self.crossover_probability ==
+                other_config.crossover_probability and
+                self.parameter_swap_probability ==
+                other_config.parameter_swap_probability and
+                self.gene_mutation_probability ==
+                other_config.gene_mutation_probability and
+                self.tournament_size == other_config.tournament_size)

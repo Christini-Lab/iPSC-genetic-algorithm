@@ -57,24 +57,20 @@ class IrregularPacingInfo:
         sti = plt.scatter(self.stimulations, stimulation_y_values, c='red')
         plt.legend((sti,), ('Stimulation',), loc='upper right')
 
-    def plot_peaks(self, trace: Trace) -> None:
-        # TODO how can I do this?
+    def plot_peaks_and_apd_ends(self, trace: Trace) -> None:
         peak_y_values = _find_trace_y_values(
             trace=trace,
             timings=self.peaks)
-
-        peaks = plt.scatter(self.peaks, peak_y_values, c='red')
-        plt.legend((peaks,), ('Peaks',), loc='upper right')
-
-    def plot_apd_ends(self, trace: Trace) -> None:
         apd_end_y_values = _find_trace_y_values(
             trace=trace,
             timings=self.apd_90s)
+
+        peaks = plt.scatter(self.peaks, peak_y_values, c='red')
         apd_end = plt.scatter(
             self.apd_90s,
             apd_end_y_values,
             c='orange')
-        plt.legend((apd_end,), ('APD 90',), loc='upper right')
+        plt.legend((peaks, apd_end), ('Peaks', 'APD 90'), loc='upper right')
 
     def detect_peak(self,
                     t: List[float],
@@ -87,6 +83,8 @@ class IrregularPacingInfo:
         if y_voltage < self._PEAK_DETECTION_THRESHOLD:
             return False
         if d_y_voltage[-1] <= 0 < d_y_voltage[-2]:
+            # TODO edit so that successive peaks are discovered. Decrease peak
+            # TODO mean distance.
             if not (self.peaks and t[-1] - self.peaks[-1] < self._PEAK_MIN_DIS):
                 return True
         return False
@@ -190,7 +188,7 @@ def _find_trace_y_values(trace, timings):
     for i in timings:
         array = np.asarray(trace.t)
         index = _find_closest_t_index(array, i)
-        y_values.append(trace.y[0][index])
+        y_values.append(trace.y[index])
     return y_values
 
 
@@ -224,3 +222,19 @@ class Trace:
 
     def plot(self):
         plt.plot(self.t, self.y)
+
+    def plot_with_currents(self):
+        if not self.current_response_info:
+            return ValueError('Trace does not have current info stored. Trace '
+                              'was not generated with voltage clamp protocol.')
+
+        plt.plot(self.t, self.y, 'b--')
+        plt.plot(self.t, self.current_response_info.get_current_summed(), 'r--')
+
+    def plot_only_currents(self, color):
+        if not self.current_response_info:
+            return ValueError('Trace does not have current info stored. Trace '
+                              'was not generated with voltage clamp protocol.')
+
+        plt.plot(self.t, self.current_response_info.get_current_summed(), color)
+

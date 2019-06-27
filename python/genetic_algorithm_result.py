@@ -14,6 +14,7 @@ from matplotlib.colors import LogNorm
 import seaborn as sns
 
 import paci_2018
+import protocols
 
 
 class ExtremeType(enum.Enum):
@@ -121,7 +122,7 @@ class GeneticAlgorithmResult:
         ax.collections[0].colorbar.set_label('Error')
         plt.show()
 
-    def graph_individual_with_param_set(self, individual):
+    def graph_individual_with_param_set(self, individual, title=''):
         """Graphs an individual and its parameters.
 
         Graphs an individual's trace on the backdrop of the baseline trace. Also
@@ -130,15 +131,14 @@ class GeneticAlgorithmResult:
 
         Args:
             individual: An individual represented by a list of parameters.
+            title: Title of the graph.
 
         Returns:
             None.
         """
         plt.figure()
         plt.subplot(1, 2, 1)
-        trace = self.graph_individual(individual)
-        if trace.pacing_info:
-            trace.plot_stimulation_times()
+        self.graph_individual(individual)
 
         plt.subplot(1, 2, 2)
         parameter_scaling = self.get_parameter_scales(individual=individual)
@@ -151,20 +151,29 @@ class GeneticAlgorithmResult:
             align='center')
         plt.xlabel('Parameter scaling')
         plt.ylabel('Parameters')
+        plt.title(title)
         plt.yticks(parameter_indices, parameter_indices)
         plt.xticks([i for i in range(4)], [i for i in range(4)])
         plt.show()
 
     def graph_individual(self, individual):
         """Graphs an individual's trace."""
-        plt.plot(
-            self.baseline_trace.t,
-            self.baseline_trace.y[0],
-            color='black')
+        if isinstance(self.config.protocol, protocols.VoltageClampProtocol):
+            self.baseline_trace.plot_only_currents(color='black')
+        else:
+            plt.plot(
+                self.baseline_trace.t,
+                self.baseline_trace.y,
+                color='black')
         trace = paci_2018.generate_trace(
             config=self.config,
             params=individual.param_set)
-        plt.plot(trace.t, trace.y[0], 'b--')
+        if trace:
+            if isinstance(self.config.protocol, protocols.VoltageClampProtocol):
+                trace.plot_only_currents(color='b--')
+            else:
+                plt.plot(trace.t, trace.y, 'b--')
+
         return trace
 
     def graph_error_over_generation(self):

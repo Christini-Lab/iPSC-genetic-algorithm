@@ -108,24 +108,30 @@ class PaciModel:
 
         elif isinstance(protocol, protocols.IrregularPacingProtocol):
             pacing_info = trace.IrregularPacingInfo()
-            integrate.solve_ivp(
-                self.generate_irregular_pacing_function(
-                    protocol, pacing_info),
-                [0, protocol.duration],
-                self.y_initial,
-                method='BDF',
-                max_step=1e-3)
+            try:
+                integrate.solve_ivp(
+                    self.generate_irregular_pacing_function(
+                        protocol, pacing_info),
+                    [0, protocol.duration],
+                    self.y_initial,
+                    method='BDF',
+                    max_step=1e-3)
+            except ValueError:
+                return None
             return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
 
         elif isinstance(protocol, protocols.VoltageClampProtocol):
             self.current_response_info = trace.CurrentResponseInfo(
                 protocol=protocol)
-            integrate.solve_ivp(
-                self.generate_voltage_clamp_function(protocol),
-                [0, protocol.voltage_change_endpoints[-1]],
-                self.y_initial,
-                method='BDF',
-                max_step=1e-3)
+            try:
+                integrate.solve_ivp(
+                    self.generate_voltage_clamp_function(protocol),
+                    [0, protocol.voltage_change_endpoints[-1]],
+                    self.y_initial,
+                    method='BDF',
+                    max_step=1e-3)
+            except ValueError:
+                return None
             return trace.Trace(
                 self.t,
                 self.y_voltage,

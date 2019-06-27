@@ -18,6 +18,7 @@ import scipy.interpolate
 import ga_config
 import genetic_algorithm_result
 import paci_2018
+import protocols
 
 
 class GeneticAlgorithm:
@@ -104,16 +105,29 @@ class GeneticAlgorithm:
             set and the baseline target objective.
         """
         trace = paci_2018.generate_trace(self.config, new_parameters)
+
         # Individual could not produce valid trace
+        if not trace:
+            return self.config.MAX_ERROR
+
         error = 0
-        if trace:
+        # If a voltage clamp protocol was used, calculate error based on
+        # current, not voltage.
+        if isinstance(self.config.protocol, protocols.VoltageClampProtocol):
             base_interp = scipy.interpolate.interp1d(
                 self.baseline_trace.t,
-                self.baseline_trace.y[0])
+                self.baseline_trace.current_response_info.get_current_summed())
+
+            currents = trace.current_response_info.get_current_summed()
             for i in range(len(trace.t)):
-                error += (base_interp(trace.t[i]) - trace.y[0][i]) ** 2
+                error += (base_interp(trace.t[i]) - currents[i]) ** 2
         else:
-            error = self.config.MAX_ERROR
+            base_interp = scipy.interpolate.interp1d(
+                self.baseline_trace.t,
+                self.baseline_trace.y)
+            for i in range(len(trace.t)):
+                error += (base_interp(trace.t[i]) - trace.y[i]) ** 2
+
         return error
 
     def _mate(self, i_one: List[List[float]], i_two: List[List[float]]) -> None:
