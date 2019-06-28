@@ -27,19 +27,49 @@ class TestGeneticAlgorithm(unittest.TestCase):
         self.ga = genetic_algorithm.GeneticAlgorithm(config=config)
 
     def test_evaluate_performance_with_default(self):
-        error = self.ga._evaluate_performance(new_parameters=None)
+        error = self.ga._evaluate_performance()
 
         # Expected error should be 0, since we are comparing trace with default
         # parameters with itself.
         expected_error = 0
 
-        self.assertEqual(error, expected_error)
+        self.assertAlmostEqual(error, expected_error, 4)
 
     def test_evaluate_performance_with_varied_parameters(self):
         error = self.ga._evaluate_performance(new_parameters=[0.94, 3000.])
 
         # Because of parameter variation, error is expected to be > 0.
         self.assertGreater(error, 0)
+
+    def test_evaluate_performance_with_combined_protocol(self):
+        # TODO MOVE UP
+        random.seed(2)
+        config = ga_config.GeneticAlgorithmConfig(
+            population_size=2,
+            max_generations=2,
+            protocol=protocols.SingleActionPotentialProtocol(),
+            tunable_parameters=[
+                ga_config.Parameter(name='g_b_na', default_value=0.95),
+                ga_config.Parameter(name='g_na', default_value=3671.2302)],
+            params_lower_bound=0.9,
+            params_upper_bound=1.1,
+            crossover_probability=0.9,
+            parameter_swap_probability=0.5,
+            gene_mutation_probability=0.15,
+            tournament_size=2)
+        single_ap_ga = genetic_algorithm.GeneticAlgorithm(config=config)
+        single_ap_error = single_ap_ga._evaluate_performance(
+            new_parameters=[0.94, 3000.])
+
+        config.secondary_protocol = protocols.IrregularPacingProtocol(
+            duration=5,
+            stimulation_offsets=[0.1, 0.2])
+        combined_protocol_ga = genetic_algorithm.GeneticAlgorithm(config=config)
+        combined_protocol_error = combined_protocol_ga._evaluate_performance(
+            new_parameters=[0.94, 3000.])
+
+        # Combined protocol error should be larger than a single protocol error.
+        self.assertGreater(combined_protocol_error, single_ap_error)
 
     def test_mate(self):
         individual_one = [[0.96, 3400.]]

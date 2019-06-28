@@ -109,7 +109,7 @@ class TraceTest(unittest.TestCase):
 
     def test_find_trace_y_values(self):
         trace_t = [0.5, 1., 1.3, 1.5]
-        trace_y = [[10, 20, 25, 30]]
+        trace_y = [10, 20, 25, 30]
         trace_fake = TraceFake(t=trace_t, y=trace_y)
         timings = [0.6, 1.1, 1.7]
 

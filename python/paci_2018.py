@@ -1,8 +1,10 @@
 from math import log, sqrt
+from typing import List
 
 import numpy as np
 from scipy import integrate
 
+import ga_config
 import protocols
 import trace
 
@@ -571,16 +573,19 @@ class PaciModel:
         return d_y
 
 
-def generate_trace(config, params=None):
-    """Generates a trace given a set of parameters and config object.
+def generate_trace(tunable_parameters: List[ga_config.Parameter],
+                   protocol: ga_config.PROTOCOL_TYPE,
+                   params: List[float]=None) -> trace.Trace:
+    """Generates a trace.
 
     Leave `params` argument empty if generating baseline trace with
     default parameter values.
 
     Args:
-        config: A configs.GeneticAlgorithmConfig object.
+        tunable_parameters: List of tunable parameters.
+        protocol: A protocol object used to generate the trace.
         params: A set of parameter values (where order must match with ordered
-            labels in `config.tunable_parameters`).
+            labels in `tunable_parameters`).
 
     Returns:
         A Trace object.
@@ -588,7 +593,7 @@ def generate_trace(config, params=None):
     new_params = dict()
     if params:
         for i in range(len(params)):
-            new_params[config.tunable_parameters[i].name] = params[i]
+            new_params[tunable_parameters[i].name] = params[i]
 
     return PaciModel(
-        updated_parameters=new_params).generate_response(config.protocol)
+        updated_parameters=new_params).generate_response(protocol)

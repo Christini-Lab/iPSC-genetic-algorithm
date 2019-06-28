@@ -63,7 +63,12 @@ IP_CONFIG = ga_config.GeneticAlgorithmConfig(
 
 
 def main():
-    experiments.run_experiment(config=SAP_CONFIG, full_output=True)
+    # Single protocol
+    experiments.run_experiment(config=SAP_CONFIG)
+
+    # Combined protocol
+    SAP_CONFIG.secondary_protocol = IP_PROTOCOL
+    experiments.run_experiment(config=SAP_CONFIG)
 
 
 if __name__ == '__main__':

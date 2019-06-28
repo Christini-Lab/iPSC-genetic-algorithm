@@ -148,10 +148,7 @@ def run_experiment(
 
     if full_output:
         ga_result.generate_heatmap()
-        ga_result.graph_error_over_generation(with_scatter=True)
-
-        # TODO DEV
-        return
+        ga_result.graph_error_over_generation(with_scatter=False)
 
         random_0 = ga_result.get_random_individual(generation=0)
         worst_0 = ga_result.get_worst_individual(generation=0)

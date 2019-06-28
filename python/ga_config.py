@@ -62,6 +62,7 @@ class GeneticAlgorithmConfig:
             around the value of the gene.
         tournament_size: Number of individuals chosen during each round of
             tournament selection.
+        secondary_protocol: A secondary protocol used for a combined protocol.
     """
 
     # If a model with an individual's parameter set fails to generate a trace,
@@ -81,7 +82,8 @@ class GeneticAlgorithmConfig:
                  crossover_probability: float,
                  parameter_swap_probability: float,
                  gene_mutation_probability: float,
-                 tournament_size: int) -> None:
+                 tournament_size: int,
+                 secondary_protocol: PROTOCOL_TYPE=None) -> None:
         self.population_size = population_size
         self.max_generations = max_generations
         self.protocol = protocol
@@ -92,9 +94,10 @@ class GeneticAlgorithmConfig:
         self.parameter_swap_probability = parameter_swap_probability
         self.gene_mutation_probability = gene_mutation_probability
         self.tournament_size = tournament_size
+        self.secondary_protocol = secondary_protocol
 
     def has_equal_hyperparameters(self,
-                                other_config: GeneticAlgorithmConfig) -> bool:
+                                  other_config: GeneticAlgorithmConfig) -> bool:
         """Checks if another config object has the same hyperparameters.
 
         This is used when running comparisons between SAP and IP genetic
@@ -114,10 +117,11 @@ class GeneticAlgorithmConfig:
                 other_config.gene_mutation_probability and
                 self.tournament_size == other_config.tournament_size)
 
-    def get_appropriate_max_error(self):
-        if isinstance(self.protocol, protocols.SingleActionPotentialProtocol):
-            return self.SAP_MAX_ERROR
-        elif isinstance(self.protocol, protocols.IrregularPacingProtocol):
-            return self.IP_MAX_ERROR
-        elif isinstance(self.protocol, protocols.VoltageClampProtocol):
-            return self.VC_MAX_ERROR
+
+def get_appropriate_max_error(protocol):
+    if isinstance(protocol, protocols.SingleActionPotentialProtocol):
+        return GeneticAlgorithmConfig.SAP_MAX_ERROR
+    elif isinstance(protocol, protocols.IrregularPacingProtocol):
+        return GeneticAlgorithmConfig.IP_MAX_ERROR
+    elif isinstance(protocol, protocols.VoltageClampProtocol):
+        return GeneticAlgorithmConfig.VC_MAX_ERROR

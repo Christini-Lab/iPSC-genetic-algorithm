@@ -166,7 +166,8 @@ class GeneticAlgorithmResult:
                 self.baseline_trace.y,
                 color='black')
         trace = paci_2018.generate_trace(
-            config=self.config,
+            tunable_parameters=self.config.tunable_parameters,
+            protocol=self.config.tunable_parameters,
             params=individual.param_set)
         if trace:
             if isinstance(self.config.protocol, protocols.VoltageClampProtocol):
