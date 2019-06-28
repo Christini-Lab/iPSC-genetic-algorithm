@@ -2,7 +2,9 @@
 
 Use the functions in this module in the main.py module.
 """
-from typing import List, Union
+
+import random
+from typing import Dict, List, Union
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -14,6 +16,68 @@ import genetic_algorithm
 import genetic_algorithm_result
 import paci_2018
 import protocols
+
+COLORS = {
+    'Single Action Potential': 'green',
+    'Irregular Pacing': 'blue',
+    'Voltage Clamp': 'red',
+    'Combined Protocol': 'black',
+}
+
+
+def _graph_error_over_generation(result, color, label):
+    """Graphs the change in error over generations."""
+    best_individual_errors = []
+
+    for i in range(len(result.generations)):
+        best_individual_errors.append(result.get_best_individual(i).error)
+
+    best_individual_error_line, = plt.plot(
+        range(len(result.generations)),
+        best_individual_errors,
+        label='{}: Best Individual'.format(label),
+        color=color)
+    return best_individual_error_line
+
+
+def _plot_error_scatter(result: genetic_algorithm_result.GeneticAlgorithmResult,
+                        color: str) -> None:
+    x_data = []
+    y_data = []
+    for i in range(result.config.max_generations):
+        for j in range(result.config.population_size):
+            x_data.append(j)
+            y_data.append(
+                result.get_individual(generation=i, index=j).error)
+    plt.scatter(x_data, y_data, alpha=0.3, color=color)
+
+
+def generate_error_over_generation_graph(
+        results: Dict[str, genetic_algorithm_result.GeneticAlgorithmResult]
+) -> None:
+    # Check to ensure all config hyper parameters are the same.
+    random_result = results[random.choice(list(results.keys()))]
+    for i in results.values():
+        if not random_result.config.has_equal_hyperparameters(i.config):
+            raise ValueError('Results given do not have the same config.')
+
+    legend_handles = []
+    for key, val in results.items():
+        if key not in COLORS:
+            raise ValueError('Please specify a color pairing for the protocol.')
+        _plot_error_scatter(result=val, color=COLORS[key])
+
+        best_ind_line = _graph_error_over_generation(
+            result=val,
+            color=COLORS[key],
+            label=key)
+        legend_handles.append(best_ind_line)
+
+    plt.legend(handles=legend_handles, loc='upper right')
+    hfont = {'fontname': 'Helvetica'}
+    plt.xlabel('Generation', **hfont)
+    plt.ylabel('Individual', **hfont)
+    plt.show()
 
 
 def generate_parameter_scaling_figure(

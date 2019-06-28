@@ -23,8 +23,8 @@ PARAMETERS.sort(key=lambda x: x.name)
 
 SAP_PROTOCOL = protocols.SingleActionPotentialProtocol()
 IP_PROTOCOL = protocols.IrregularPacingProtocol(
-        duration=5,
-        stimulation_offsets=[0.1, 0.2, 0.3])
+        duration=3,
+        stimulation_offsets=[0.1])
 VC_PROTOCOL = protocols.VoltageClampProtocol(
     steps=[
         protocols.VoltageClampStep(duration=0.1, voltage=-0.08),
@@ -50,8 +50,8 @@ SAP_CONFIG = ga_config.GeneticAlgorithmConfig(
     tournament_size=2)
 
 IP_CONFIG = ga_config.GeneticAlgorithmConfig(
-        population_size=2,
-        max_generations=2,
+        population_size=10,
+        max_generations=10,
         protocol=IP_PROTOCOL,
         tunable_parameters=PARAMETERS,
         params_lower_bound=0.5,
@@ -63,12 +63,11 @@ IP_CONFIG = ga_config.GeneticAlgorithmConfig(
 
 
 def main():
-    # Single protocol
-    experiments.run_experiment(config=SAP_CONFIG)
-
-    # Combined protocol
-    SAP_CONFIG.secondary_protocol = IP_PROTOCOL
-    experiments.run_experiment(config=SAP_CONFIG)
+    sap_result = experiments.run_experiment(config=SAP_CONFIG)
+    ip_result = experiments.run_experiment(config=IP_CONFIG)
+    experiments.generate_error_over_generation_graph(
+        results={'Single Action Potential': sap_result,
+                 'Irregular Pacing': ip_result})
 
 
 if __name__ == '__main__':
