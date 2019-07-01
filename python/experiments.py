@@ -2,7 +2,7 @@
 
 Use the functions in this module in the main.py module.
 """
-
+import collections
 import random
 from typing import Dict, List, Union
 
@@ -23,6 +23,13 @@ COLORS = {
     'Voltage Clamp': 'red',
     'Combined Protocol': 'black',
 }
+
+PROTOCOL_TITLES = {
+    protocols.SingleActionPotentialProtocol: 'Single Action Potential',
+    protocols.IrregularPacingProtocol: 'Irregular Pacing',
+    protocols.VoltageClampProtocol: 'Voltage Clamp',
+}
+COMBINED_TITLE = 'Combined Protocol'
 
 
 def _graph_error_over_generation(result, color, label):
@@ -81,35 +88,24 @@ def generate_error_over_generation_graph(
 
 
 def generate_parameter_scaling_figure(
-        sap_results: List[genetic_algorithm_result.GeneticAlgorithmResult],
-        ip_results: List[genetic_algorithm_result.GeneticAlgorithmResult]
+        results: Dict[str,
+                      List[genetic_algorithm_result.GeneticAlgorithmResult]]
 ) -> None:
-    if len(sap_results) != len(ip_results):
-        raise ValueError('Please provide the same count of sap and ip results.')
-
-    results_count = len(sap_results)
-    sap_scalings = []
-    ip_scalings = []
-    for i in range(results_count):
-        best_ind_sap = sap_results[i].get_best_individual(
-            sap_results[i].config.max_generations - 1)
-        sap_scalings.append(sap_results[i].get_parameter_scales(best_ind_sap))
-        best_ind_ip = ip_results[i].get_best_individual(
-            ip_results[i].config.max_generations - 1)
-        ip_scalings.append(ip_results[i].get_parameter_scales(best_ind_ip))
-
-    tunable_params = sap_results[0].config.tunable_parameters
-    sap_examples = _make_parameter_scaling_examples(
-        params=sap_scalings,
-        protocol_type='SAP',
-        default_params=tunable_params)
-    ip_examples = _make_parameter_scaling_examples(
-        params=ip_scalings,
-        protocol_type='IP',
-        default_params=tunable_params)
+    examples = []
+    for key, val in results.items():
+        temp_examples = []
+        tunable_params = val[0].config.tunable_parameters
+        for result in val:
+            best_individual = result.get_best_individual(
+                result.config.max_generations - 1)
+            temp_examples.append(result.get_parameter_scales(best_individual))
+        examples.extend(_make_parameter_scaling_examples(
+            params=temp_examples,
+            protocol_type=key,
+            default_params=tunable_params))
 
     param_example_df = pd.DataFrame(
-        np.array(sap_examples + ip_examples),
+        np.array(examples),
         columns=['Parameter Scaling', 'Parameter', 'Protocol Type'])
     # Convert parameter value column, which is defaulted to object, to numeric
     # type.
@@ -130,10 +126,10 @@ def generate_parameter_scaling_figure(
 
 
 def generate_error_strip_plot(
-        sap_results: List[genetic_algorithm_result.GeneticAlgorithmResult],
-        ip_results: List[genetic_algorithm_result.GeneticAlgorithmResult]
+        results: Dict[str,
+                      List[genetic_algorithm_result.GeneticAlgorithmResult]]
 ) -> None:
-    df = _generate_error_strip_plot_data_frame(sap_results, ip_results)
+    df = _generate_error_strip_plot_data_frame(results=results)
     plt.figure()
     sns.stripplot(
         x='Protocol Type',
@@ -143,27 +139,19 @@ def generate_error_strip_plot(
     plt.show()
 
 
-def _generate_error_strip_plot_data_frame(sap_results, ip_results):
-    errors_sap = []
-    for i in sap_results:
-        best_ind = i.get_best_individual(
-            generation=i.config.max_generations - 1)
-        errors_sap.append(best_ind.error)
-
-    errors_ip = []
-    for i in ip_results:
-        best_ind = i.get_best_individual(
-            generation=i.config.max_generations - 1)
-        errors_ip.append(best_ind.error)
-
-    df_data_dict = dict()
-    df_data_dict['Error'] = errors_sap + errors_ip
-    df_data_dict['Protocol Type'] = [
-        'Single AP' for _ in range(len(errors_sap))
-    ] + [
-        'Irregular Pacing' for _ in range(len(errors_ip))
-    ]
-    return pd.DataFrame(df_data_dict)
+def _generate_error_strip_plot_data_frame(
+        results: Dict[str,
+                      List[genetic_algorithm_result.GeneticAlgorithmResult]]
+) -> pd.DataFrame:
+    errors = []
+    protocol_types = []
+    for key, val in results.items():
+        for result in val:
+            best_individual = result.get_best_individual(
+                generation=result.config.max_generations - 1)
+            errors.append(best_individual.error)
+            protocol_types.append(key)
+    return pd.DataFrame(data={'Error': errors, 'Protocol Type': protocol_types})
 
 
 def _make_parameter_scaling_examples(
@@ -178,29 +166,49 @@ def _make_parameter_scaling_examples(
     return examples
 
 
-def run_sap_ip_comparison_experiment(
-        sap_config: ga_config.GeneticAlgorithmConfig,
-        ip_config: ga_config.GeneticAlgorithmConfig,
-        iterations: int) -> None:
-    if not sap_config.has_equal_hyperparameters(other_config=ip_config):
-        raise ValueError('Configs passed in have different hyperparameters.')
+def run_comparison_experiment(
+        configs: List[ga_config.GeneticAlgorithmConfig],
+        iterations: int
+) -> Dict[str, List[genetic_algorithm_result.GeneticAlgorithmResult]]:
+    """Runs a comparison between all the configs that were passed in."""
+    if not _has_equal_hyperparameters(configs=configs):
+        raise ValueError('Configs do not have the same hyper parameters.')
 
-    sap_results = []
-    for i in range(iterations):
-        print('Running SAP GA iteration: {}'.format(i))
-        sap_results.append(run_experiment(sap_config))
+    if not _has_unique_protocols(configs=configs):
+        raise ValueError('Configs do not have unique protocols.')
 
-    ip_results = []
-    for i in range(iterations):
-        print('Running IP GA iteration: {}'.format(i))
-        ip_results.append(run_experiment(ip_config))
+    results = collections.defaultdict(list)
+    for config in configs:
+        protocol_title = PROTOCOL_TITLES[type(config.protocol)]
+        if config.secondary_protocol:
+            protocol_title = COMBINED_TITLE
+        for i in range(iterations):
+            print('Running {} GA iteration: {}'.format(protocol_title, i))
+            results[protocol_title].append(run_experiment(config))
 
-    generate_parameter_scaling_figure(
-        sap_results=sap_results,
-        ip_results=ip_results)
-    generate_error_strip_plot(
-        sap_results=sap_results,
-        ip_results=ip_results)
+    generate_parameter_scaling_figure(results=results)
+    generate_error_strip_plot(results=results)
+    return results
+
+
+def _has_equal_hyperparameters(
+        configs: List[ga_config.GeneticAlgorithmConfig]) -> bool:
+    first_config = configs[0]
+    for i in configs:
+        if not first_config.has_equal_hyperparameters(i):
+            return False
+    return True
+
+
+def _has_unique_protocols(
+        configs: List[ga_config.GeneticAlgorithmConfig]) -> bool:
+    protocol_list = []
+    for i in configs:
+        if i.secondary_protocol:
+            protocol_list.append('Combined Protocol')
+        else:
+            protocol_list.append(type(i.protocol))
+    return len(protocol_list) == len(set(protocol_list))
 
 
 def run_experiment(

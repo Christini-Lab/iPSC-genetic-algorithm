@@ -38,8 +38,8 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
 )
 
 SAP_CONFIG = ga_config.GeneticAlgorithmConfig(
-    population_size=10,
-    max_generations=10,
+    population_size=2,
+    max_generations=2,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.5,
@@ -50,8 +50,8 @@ SAP_CONFIG = ga_config.GeneticAlgorithmConfig(
     tournament_size=2)
 
 IP_CONFIG = ga_config.GeneticAlgorithmConfig(
-        population_size=10,
-        max_generations=10,
+        population_size=2,
+        max_generations=2,
         protocol=IP_PROTOCOL,
         tunable_parameters=PARAMETERS,
         params_lower_bound=0.5,
@@ -63,11 +63,10 @@ IP_CONFIG = ga_config.GeneticAlgorithmConfig(
 
 
 def main():
-    sap_result = experiments.run_experiment(config=SAP_CONFIG)
-    ip_result = experiments.run_experiment(config=IP_CONFIG)
-    experiments.generate_error_over_generation_graph(
-        results={'Single Action Potential': sap_result,
-                 'Irregular Pacing': ip_result})
+    experiments.run_comparison_experiment(
+        sap_config=SAP_CONFIG,
+        ip_config=IP_CONFIG,
+        iterations=3)
 
 
 if __name__ == '__main__':
