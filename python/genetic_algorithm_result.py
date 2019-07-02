@@ -120,7 +120,7 @@ class GeneticAlgorithmResult:
         ax.axhline(linewidth=4, color='black')
         ax.axvline(linewidth=4, color='black')
         ax.collections[0].colorbar.set_label('Error')
-        plt.show()
+        plt.savefig('figures/heatmap.png')
 
     def graph_individual_with_param_set(self, individual, title=''):
         """Graphs an individual and its parameters.
@@ -154,7 +154,6 @@ class GeneticAlgorithmResult:
         plt.title(title)
         plt.yticks(parameter_indices, parameter_indices)
         plt.xticks([i for i in range(4)], [i for i in range(4)])
-        plt.show()
 
     def graph_individual(self, individual):
         """Graphs an individual's trace."""
@@ -211,7 +210,7 @@ class GeneticAlgorithmResult:
         plt.xlabel('Generation', **hfont)
         plt.ylabel('Individual', **hfont)
         plt.legend(handles=[mean_error_line, best_individual_error_line])
-        plt.show()
+        plt.savefig('figures/error_over_generation.png')
 
 
 class IndividualResult:

@@ -1,5 +1,7 @@
 """Main driver for program. Use functions in experiments.py to run GAs."""
 
+import os
+
 import experiments
 import protocols
 import ga_config
@@ -50,23 +52,20 @@ SAP_CONFIG = ga_config.GeneticAlgorithmConfig(
     tournament_size=2)
 
 IP_CONFIG = ga_config.GeneticAlgorithmConfig(
-        population_size=2,
-        max_generations=2,
-        protocol=IP_PROTOCOL,
-        tunable_parameters=PARAMETERS,
-        params_lower_bound=0.5,
-        params_upper_bound=1.5,
-        crossover_probability=0.9,
-        parameter_swap_probability=0.5,
-        gene_mutation_probability=0.1,
-        tournament_size=2)
+    population_size=2,
+    max_generations=2,
+    protocol=IP_PROTOCOL,
+    tunable_parameters=PARAMETERS,
+    params_lower_bound=0.5,
+    params_upper_bound=1.5,
+    crossover_probability=0.9,
+    parameter_swap_probability=0.5,
+    gene_mutation_probability=0.1,
+    tournament_size=2)
 
 
 def main():
-    experiments.run_comparison_experiment(
-        sap_config=SAP_CONFIG,
-        ip_config=IP_CONFIG,
-        iterations=3)
+    experiments.run_experiment(config=SAP_CONFIG, full_output=True)
 
 
 if __name__ == '__main__':

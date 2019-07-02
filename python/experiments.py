@@ -3,6 +3,7 @@
 Use the functions in this module in the main.py module.
 """
 import collections
+import os
 import random
 from typing import Dict, List, Union
 
@@ -84,7 +85,7 @@ def generate_error_over_generation_graph(
     hfont = {'fontname': 'Helvetica'}
     plt.xlabel('Generation', **hfont)
     plt.ylabel('Individual', **hfont)
-    plt.show()
+    plt.savefig('figures/error_over_generation.png')
 
 
 def generate_parameter_scaling_figure(
@@ -122,7 +123,7 @@ def generate_parameter_scaling_figure(
         dodge=True)
     for i in range(0, len(tunable_params), 2):
         ax.axvspan(i + 0.5, i + 1.5, facecolor='lightgrey', alpha=0.3)
-    plt.show()
+    plt.savefig('figures/parameter_scaling.png')
 
 
 def generate_error_strip_plot(
@@ -136,7 +137,7 @@ def generate_error_strip_plot(
         y='Error',
         data=df,
         palette='Set2')
-    plt.show()
+    plt.savefig('figures/error_strip_plot.png')
 
 
 def _generate_error_strip_plot_data_frame(
@@ -233,20 +234,30 @@ def run_experiment(
         ga_result.graph_individual_with_param_set(
             individual=random_0,
             title='Random individual, generation 0')
+        plt.savefig('figures/Random individual, generation 0.png')
 
         ga_result.graph_individual_with_param_set(
             individual=worst_0,
             title='Worst individual, generation 0')
+        plt.savefig('figures/Worst individual, generation 0')
+
         ga_result.graph_individual_with_param_set(
             individual=best_0,
             title='Best individual, generation 0')
+        plt.savefig('figures/Best individual, generation 0')
+
         ga_result.graph_individual_with_param_set(
             individual=best_middle,
             title='Best individual, generation {}'.format(
                 config.max_generations // 2))
+        plt.savefig('figures/Best individual, generation {}'.format(
+                config.max_generations // 2))
+
         ga_result.graph_individual_with_param_set(
             individual=best_end,
             title='Best individual, generation {}'.format(
+                config.max_generations - 1))
+        plt.savefig('figures/Best individual, generation {}'.format(
                 config.max_generations - 1))
     return ga_result
 
@@ -256,7 +267,7 @@ def plot_baseline_single_action_potential_trace():
     trace = model.generate_response(
         protocol=protocols.SingleActionPotentialProtocol())
     trace.plot()
-    plt.show()
+    plt.savefig('figures/baseline_single_action_potential_trace.png')
 
 
 def plot_baseline_irregular_pacing_trace():
@@ -267,7 +278,7 @@ def plot_baseline_irregular_pacing_trace():
             stimulation_offsets=[0.6, 0.4, 1., 0.1, 0.2, 0.0, 0.8, 0.9]))
     trace.plot()
     trace.pacing_info.plot_peaks_and_apd_ends(trace=trace)
-    plt.show()
+    plt.savefig('figures/baseline_irregular_pacing_trace.png')
 
 
 def plot_baseline_voltage_clamp_trace():
@@ -283,4 +294,4 @@ def plot_baseline_voltage_clamp_trace():
     trace = model.generate_response(
         protocol=protocols.VoltageClampProtocol(steps=steps))
     trace.plot_with_currents()
-    plt.show()
+    plt.savefig('figures/baseline_voltage_clamp_trace.png')
