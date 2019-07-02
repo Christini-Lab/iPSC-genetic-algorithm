@@ -64,6 +64,18 @@ class VoltageClampStep:
         self.voltage = voltage
         self.duration = duration
 
+    def __str__(self):
+        return 'Voltage: {}, Duration: {}'.format(self.voltage, self.duration)
+
+    def __repr__(self):
+        return self.__str()
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return (abs(self.voltage - other.voltage) < 0.001 and
+                abs(self.duration - other.duration) < 0.001)
+
 
 class VoltageClampProtocol:
     """Encapsulates state and behavior of a voltage clamp protocol."""
@@ -71,6 +83,25 @@ class VoltageClampProtocol:
     def __init__(self, steps: List[VoltageClampStep]) -> None:
         self.steps = steps
         self.voltage_change_endpoints = self.init_voltage_change_endpoints()
+
+    def __eq__(self, other):
+
+        if not isinstance(other, self.__class__):
+            return False
+
+        if len(other.steps) != len(self.steps):
+            return False
+
+        for i in range(len(other.steps)):
+            if other.steps[i] != self.steps[i]:
+                return False
+        return True
+
+    def __str__(self):
+        return ' | '.join([i.__str__() for i in self.steps])
+
+    def __repr__(self):
+        return self.__str__()
 
     def init_voltage_change_endpoints(self) -> List[float]:
         """Initializes voltage change endpoints based on the steps provided.
