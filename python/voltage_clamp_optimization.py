@@ -16,6 +16,9 @@ class VCOGeneticAlgorithm:
     MUTATION_PROBABILITY = 0.5
     MATE_PROBABILITY = 0.5
     CONTRIBUTION_STEP = 100
+    STEP_COUNT = 6
+    DURATION_BOUNDS = (0., 2.)
+    VOLTAGE_BOUNDS = (-1.2, .6)
 
     def __init__(self):
         pass
@@ -61,8 +64,14 @@ class VCOGeneticAlgorithm:
                 individual.steps[i].duration = np.random.normal(
                     individual.steps[i].duration)
 
-    def _init_params(self):
-        pass
+    def _init_individual(self):
+        steps = []
+        for i in range(self.STEP_COUNT):
+            random_step = protocols.VoltageClampStep(
+                voltage=random.uniform(*self.VOLTAGE_BOUNDS),
+                duration=random.uniform(*self.DURATION_BOUNDS))
+            steps.append(random_step)
+        return protocols.VoltageClampProtocol(steps=steps)
 
 
 def _calc_fitness_score(contributions: List[pd.DataFrame]) -> int:

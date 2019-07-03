@@ -116,6 +116,15 @@ class VoltageClampOptimizationTest(unittest.TestCase):
 
         self.assertAlmostEqual(fitness_score, expected_fitness_score)
 
+    def test_init_parameters(self):
+        vc_ga = voltage_clamp_optimization.VCOGeneticAlgorithm()
+        individuals = [vc_ga._init_individual() for _ in range(10)]
+
+        for i in individuals:
+            for j in i.steps:
+                self.assertTrue(0. <= j.duration <= 2.)
+                self.assertTrue(-1.2 <= j.voltage <= .6)
+
 
 if __name__ == '__main__':
     unittest.main()
