@@ -12,13 +12,13 @@ class VoltageClampOptimizationTest(unittest.TestCase):
 
     def test_mate(self):
         vc_ga = voltage_clamp_optimization.VCOGeneticAlgorithm()
-        individual_one = protocols.VoltageClampProtocol(
+        protocol_one = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=1.0, duration=0.5),
                 protocols.VoltageClampStep(voltage=2.0, duration=0.75),
             ]
         )
-        individual_two = protocols.VoltageClampProtocol(
+        protocol_two = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=5.0, duration=1.0),
                 protocols.VoltageClampStep(voltage=-2.0, duration=2.75),
@@ -27,31 +27,31 @@ class VoltageClampOptimizationTest(unittest.TestCase):
 
         # With random seed set to 3, first value of random.random() is 0.237,
         # and second value is 0.544. Therefore we should expect only the second
-        # step to switch with MATE_PROBABILITY set to 0.5.
+        # step to switch with CROSSOVER_PROBABILITY set to 0.5.
         random.seed(3)
 
         vc_ga._mate(
-            individual_one=individual_one,
-            individual_two=individual_two)
+            i_one=voltage_clamp_optimization.Individual(protocol=protocol_one),
+            i_two=voltage_clamp_optimization.Individual(protocol=protocol_two))
 
-        expected_individual_one = protocols.VoltageClampProtocol(
+        expected_protocol_one = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=1.0, duration=0.5),
                 protocols.VoltageClampStep(voltage=-2.0, duration=2.75),
             ]
         )
-        expected_individual_two = protocols.VoltageClampProtocol(
+        expected_protocol_two = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=5.0, duration=1.0),
                 protocols.VoltageClampStep(voltage=2.0, duration=0.75),
             ]
         )
-        self.assertEqual(individual_one, expected_individual_one)
-        self.assertEqual(individual_two, expected_individual_two)
+        self.assertEqual(protocol_one, expected_protocol_one)
+        self.assertEqual(protocol_two, expected_protocol_two)
 
     def test_mutate(self):
         vc_ga = voltage_clamp_optimization.VCOGeneticAlgorithm()
-        individual = protocols.VoltageClampProtocol(
+        protocol = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=1.0, duration=0.5),
                 protocols.VoltageClampStep(voltage=2.0, duration=0.75),
@@ -60,25 +60,26 @@ class VoltageClampOptimizationTest(unittest.TestCase):
 
         # With random seed set to 3, first value of random.random() is 0.237,
         # and second value is 0.544. Therefore we should expect only the second
-        # step to mutate with MUTATION_PROBABILITY set to 0.5. With np.random
+        # step to mutate with GENE_SWAP_PROBABILITY set to 0.5. With np.random
         # seed set, the voltage will be mutated to 3.7886 and the duration to
         # 1.1865.
         random.seed(3)
         np.random.seed(3)
 
-        vc_ga._mutate(individual=individual)
-        expected_individual = protocols.VoltageClampProtocol(
+        vc_ga._mutate(individual=voltage_clamp_optimization.Individual(
+            protocol=protocol))
+        expected_protocol = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=1.0, duration=0.5),
                 protocols.VoltageClampStep(voltage=3.7886, duration=1.1865),
             ]
         )
 
-        self.assertEqual(individual, expected_individual)
+        self.assertEqual(protocol, expected_protocol)
 
     def test_evaluate_returns_zero_error(self):
         vc_ga = voltage_clamp_optimization.VCOGeneticAlgorithm()
-        individual = protocols.VoltageClampProtocol(
+        protocol = protocols.VoltageClampProtocol(
             steps=[
                 # Intentionally set to large voltage.
                 protocols.VoltageClampStep(voltage=1000.0, duration=0.5),
@@ -86,13 +87,14 @@ class VoltageClampOptimizationTest(unittest.TestCase):
             ]
         )
 
-        error = vc_ga._evaluate(individual=individual)
+        error = vc_ga._evaluate(
+            individual=voltage_clamp_optimization.Individual(protocol=protocol))
 
         self.assertEqual(error, 0)
 
     def test_evaluate_returns_normal(self):
         vc_ga = voltage_clamp_optimization.VCOGeneticAlgorithm()
-        individual = protocols.VoltageClampProtocol(
+        protocol = protocols.VoltageClampProtocol(
             steps=[
                 # Intentionally set to large voltage.
                 protocols.VoltageClampStep(voltage=0.2, duration=0.1),
@@ -100,7 +102,8 @@ class VoltageClampOptimizationTest(unittest.TestCase):
             ]
         )
 
-        error = vc_ga._evaluate(individual=individual)
+        error = vc_ga._evaluate(
+            individual=voltage_clamp_optimization.Individual(protocol=protocol))
         self.assertGreater(error, 0)
 
     def test_calculate_fitness_score_from_contributions(self):
@@ -121,7 +124,7 @@ class VoltageClampOptimizationTest(unittest.TestCase):
         individuals = [vc_ga._init_individual() for _ in range(10)]
 
         for i in individuals:
-            for j in i.steps:
+            for j in i.protocol.steps:
                 self.assertTrue(0. <= j.duration <= 2.)
                 self.assertTrue(-1.2 <= j.voltage <= .6)
 
