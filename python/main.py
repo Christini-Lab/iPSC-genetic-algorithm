@@ -39,27 +39,29 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
     ]
 )
 
-SAP_CONFIG = ga_config.GeneticAlgorithmConfig(
+SAP_CONFIG = ga_config.ParameterTuningConfig(
     population_size=2,
     max_generations=2,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.5,
     params_upper_bound=1.5,
-    crossover_probability=0.9,
-    parameter_swap_probability=0.5,
+    mutate_probability=1.0,
+    mate_probability=0.9,
+    gene_swap_probability=0.5,
     gene_mutation_probability=0.1,
     tournament_size=2)
 
-IP_CONFIG = ga_config.GeneticAlgorithmConfig(
+IP_CONFIG = ga_config.ParameterTuningConfig(
     population_size=2,
     max_generations=2,
     protocol=IP_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.5,
     params_upper_bound=1.5,
-    crossover_probability=0.9,
-    parameter_swap_probability=0.5,
+    mutate_probability=1.0,
+    mate_probability=0.9,
+    gene_swap_probability=0.5,
     gene_mutation_probability=0.1,
     tournament_size=2)
 

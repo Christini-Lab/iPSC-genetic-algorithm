@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Union
+from typing import List, Union, Tuple
 import protocols
 
 PROTOCOL_TYPE = Union[
@@ -29,7 +29,7 @@ class Parameter:
         return self.name
 
     def __repr__(self) -> str:
-        return self.name
+        return self.__str__()
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -42,6 +42,46 @@ class GeneticAlgorithmConfig:
     Attributes:
         population_size: Size of the population in each generation.
         max_generations: Max number of generations to run the algorithm for.
+        mate_probability: The probability two individuals will `mate`.
+        gene_swap_probability: The probability a parameter, or `gene`, will
+            be swapped between a pair of `mated` individuals.
+        gene_mutation_probability: Probability a certain gene will be mutated:
+            replaced with a random number from a normal distribution centered
+            around the value of the gene.
+        tournament_size: Number of individuals chosen during each round of
+            tournament selection.
+    """
+
+    def __init__(self,
+                 population_size: int,
+                 max_generations: int,
+                 mate_probability: float,
+                 mutate_probability: float,
+                 gene_swap_probability: float,
+                 gene_mutation_probability: float,
+                 tournament_size: int) -> None:
+        self.population_size = population_size
+        self.max_generations = max_generations
+        self.mate_probability = mate_probability
+        self.mutate_probability = mutate_probability
+        self.gene_swap_probability = gene_swap_probability
+        self.gene_mutation_probability = gene_mutation_probability
+        self.tournament_size = tournament_size
+
+    def has_equal_hyperparameters(self, other: GeneticAlgorithmConfig):
+        return (self.population_size == other.population_size and
+                self.max_generations == other.max_generations and
+                self.mate_probability == other.mate_probability and
+                self.gene_swap_probability == other.gene_swap_probability and
+                self.gene_mutation_probability ==
+                other.gene_mutation_probability and
+                self.tournament_size == other.tournament_size)
+
+
+class ParameterTuningConfig(GeneticAlgorithmConfig):
+    """Config for a parameter tuning genetic algorithm.
+
+    Attributes:
         protocol: Object representing the specific target objective of the
             genetic algorithm.
         tunable_parameters: List of strings representing the names of parameters
@@ -54,14 +94,6 @@ class GeneticAlgorithmConfig:
         params_upper_bound: A float representing the upper bound a randomized
             parameter value can be for any individual in the population. See
             the description of `params_lower_bound` for more info.
-        crossover_probability: The probability two individuals will `mate`.
-        parameter_swap_probability: The probability a parameter, or `gene`, will
-            be swapped between a pair of `mated` individuals.
-        gene_mutation_probability: Probability a certain gene will be mutated:
-            replaced with a random number from a normal distribution centered
-            around the value of the gene.
-        tournament_size: Number of individuals chosen during each round of
-            tournament selection.
         secondary_protocol: A secondary protocol used for a combined protocol.
     """
 
@@ -73,55 +105,82 @@ class GeneticAlgorithmConfig:
     VC_MAX_ERROR = 130
 
     def __init__(self,
-                 population_size: int,
-                 max_generations: int,
                  protocol: PROTOCOL_TYPE,
-                 tunable_parameters: List[Parameter],
                  params_lower_bound: float,
                  params_upper_bound: float,
-                 crossover_probability: float,
-                 parameter_swap_probability: float,
+                 tunable_parameters: List[Parameter],
+                 mate_probability: float,
+                 mutate_probability: float,
+                 population_size: int,
+                 max_generations: int,
+                 gene_swap_probability: float,
                  gene_mutation_probability: float,
                  tournament_size: int,
                  secondary_protocol: PROTOCOL_TYPE=None) -> None:
-        self.population_size = population_size
-        self.max_generations = max_generations
         self.protocol = protocol
         self.tunable_parameters = tunable_parameters
         self.params_lower_bound = params_lower_bound
         self.params_upper_bound = params_upper_bound
-        self.crossover_probability = crossover_probability
-        self.parameter_swap_probability = parameter_swap_probability
-        self.gene_mutation_probability = gene_mutation_probability
-        self.tournament_size = tournament_size
         self.secondary_protocol = secondary_protocol
+        super().__init__(
+            population_size=population_size,
+            max_generations=max_generations,
+            mate_probability=mate_probability,
+            gene_swap_probability=gene_swap_probability,
+            mutate_probability=mutate_probability,
+            gene_mutation_probability=gene_mutation_probability,
+            tournament_size=tournament_size)
 
-    def has_equal_hyperparameters(self,
-                                  other_config: GeneticAlgorithmConfig) -> bool:
-        """Checks if another config object has the same hyperparameters.
-
-        This is used when running comparisons between SAP and IP genetic
-        algorithms. Both configs should have the same hyperparameters, but will
-        differ in their protocol.
-        """
-        return (self.population_size == other_config.population_size and
-                self.max_generations == other_config.max_generations and
-                self.tunable_parameters == other_config.tunable_parameters and
-                self.params_lower_bound == other_config.params_lower_bound and
-                self.params_upper_bound == other_config.params_upper_bound and
-                self.crossover_probability ==
-                other_config.crossover_probability and
-                self.parameter_swap_probability ==
-                other_config.parameter_swap_probability and
-                self.gene_mutation_probability ==
-                other_config.gene_mutation_probability and
-                self.tournament_size == other_config.tournament_size)
+    def has_equal_hyperparameters(self, other: ParameterTuningConfig):
+        return (super().has_equal_hyperparameters(other=other) and
+                self.params_lower_bound == other.params_lower_bound and
+                self.params_upper_bound == other.params_upper_bound)
 
 
-def get_appropriate_max_error(protocol):
+def get_appropriate_max_error(protocol: PROTOCOL_TYPE) -> int:
     if isinstance(protocol, protocols.SingleActionPotentialProtocol):
-        return GeneticAlgorithmConfig.SAP_MAX_ERROR
+        return ParameterTuningConfig.SAP_MAX_ERROR
     elif isinstance(protocol, protocols.IrregularPacingProtocol):
-        return GeneticAlgorithmConfig.IP_MAX_ERROR
+        return ParameterTuningConfig.IP_MAX_ERROR
     elif isinstance(protocol, protocols.VoltageClampProtocol):
-        return GeneticAlgorithmConfig.VC_MAX_ERROR
+        return ParameterTuningConfig.VC_MAX_ERROR
+
+
+class VoltageOptimizationConfig(GeneticAlgorithmConfig):
+    """Config for a voltage optimization genetic algorithm.
+
+    Attributes:
+        contribution_step: Calculates fraction contribution of each channel
+            over `contribution_step` time points.
+        steps_in_protocol: Locked number of steps in a generated voltage clamp
+            protocol.
+        step_duration_bounds: The bounds from which the duration of a step can
+            be randomly initialized.
+        step_voltage_bounds: The bounds from which the voltage of a step can be
+            randomly initialized.
+    """
+
+    def __init__(self,
+                 contribution_step: int,
+                 steps_in_protocol: int,
+                 step_duration_bounds: Tuple[float, float],
+                 step_voltage_bounds: Tuple[float, float],
+                 mate_probability: float,
+                 mutation_probability: float,
+                 population_size: int,
+                 max_generations: int,
+                 gene_swap_probability: float,
+                 gene_mutation_probability: float,
+                 tournament_size: int):
+        self.contribution_step = contribution_step
+        self.steps_in_protocol = steps_in_protocol
+        self.step_duration_bounds = step_duration_bounds
+        self.step_voltage_bounds = step_voltage_bounds
+        super().__init__(
+            population_size=population_size,
+            max_generations=max_generations,
+            mate_probability=mate_probability,
+            mutate_probability=mutation_probability,
+            gene_swap_probability=gene_swap_probability,
+            gene_mutation_probability=gene_mutation_probability,
+            tournament_size=tournament_size)

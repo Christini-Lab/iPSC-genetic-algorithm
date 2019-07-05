@@ -11,7 +11,7 @@ import protocols
 class TestGeneticAlgorithm(unittest.TestCase):
 
     def setUp(self):
-        config = ga_config.GeneticAlgorithmConfig(
+        config = ga_config.ParameterTuningConfig(
             population_size=2,
             max_generations=2,
             protocol=protocols.SingleActionPotentialProtocol(),
@@ -20,8 +20,9 @@ class TestGeneticAlgorithm(unittest.TestCase):
                 ga_config.Parameter(name='g_na', default_value=3671.2302)],
             params_lower_bound=0.9,
             params_upper_bound=1.1,
-            crossover_probability=0.9,
-            parameter_swap_probability=0.5,
+            mutate_probability=1.0,
+            mate_probability=0.9,
+            gene_swap_probability=0.5,
             gene_mutation_probability=0.15,
             tournament_size=2)
         self.ga = genetic_algorithm.GeneticAlgorithm(config=config)
@@ -44,7 +45,7 @@ class TestGeneticAlgorithm(unittest.TestCase):
     def test_evaluate_performance_with_combined_protocol(self):
         # TODO MOVE UP
         random.seed(2)
-        config = ga_config.GeneticAlgorithmConfig(
+        config = ga_config.ParameterTuningConfig(
             population_size=2,
             max_generations=2,
             protocol=protocols.SingleActionPotentialProtocol(),
@@ -53,8 +54,9 @@ class TestGeneticAlgorithm(unittest.TestCase):
                 ga_config.Parameter(name='g_na', default_value=3671.2302)],
             params_lower_bound=0.9,
             params_upper_bound=1.1,
-            crossover_probability=0.9,
-            parameter_swap_probability=0.5,
+            mutate_probability=1.,
+            mate_probability=0.9,
+            gene_swap_probability=0.5,
             gene_mutation_probability=0.15,
             tournament_size=2)
         single_ap_ga = genetic_algorithm.GeneticAlgorithm(config=config)

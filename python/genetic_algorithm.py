@@ -33,7 +33,7 @@ class GeneticAlgorithm:
             baseline trace, serve as the algorithm's target objective.
     """
 
-    def __init__(self, config: ga_config.GeneticAlgorithmConfig) -> None:
+    def __init__(self, config: ga_config.ParameterTuningConfig) -> None:
         self.config = config
         self.baseline_trace = paci_2018.generate_trace(
             tunable_parameters=config.tunable_parameters,
@@ -73,14 +73,15 @@ class GeneticAlgorithm:
             offspring = [toolbox.clone(i) for i in selected_offspring]
 
             for i_one, i_two in zip(offspring[::2], offspring[1::2]):
-                if random.random() < self.config.crossover_probability:
+                if random.random() < self.config.mate_probability:
                     toolbox.mate(self, i_one, i_two)
                     del i_one.fitness.values
                     del i_two.fitness.values
 
             for i in offspring:
-                toolbox.mutate(self, i)
-                del i.fitness.values
+                if random.random() < self.config.mutate_probability:
+                    toolbox.mutate(self, i)
+                    del i.fitness.values
 
             # All individuals who were updated, either through crossover or
             # mutation, will be re-evaluated.
@@ -148,7 +149,7 @@ class GeneticAlgorithm:
         """Performs crossover between two individuals.
 
         There may be a possibility no parameters are swapped. This probability
-        is controlled by `self.config.parameter_swap_probability`. Modifies
+        is controlled by `self.config.gene_swap_probability`. Modifies
         both individuals in-place.
 
         Args:
@@ -156,7 +157,7 @@ class GeneticAlgorithm:
             i_two: Another individual in the population.
         """
         for i in range(len(i_one[0])):
-            if random.random() < self.config.parameter_swap_probability:
+            if random.random() < self.config.gene_swap_probability:
                 i_one[0][i], i_two[0][i] = i_two[0][i], i_one[0][i]
 
     def _mutate(self, individual: List[List[float]]) -> None:

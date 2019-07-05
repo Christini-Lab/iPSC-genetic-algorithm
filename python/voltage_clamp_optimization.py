@@ -38,6 +38,8 @@ class VCOGeneticAlgorithm:
         for generation in range(1, self.generations):
             print('Generation {}'.format(generation))
 
+            # TODO call selection method here.
+
             for i_one, i_two in zip(population[::2], population[1::2]):
                 if random.random() < self.MATE_PROBABILITY:
                     self._mate(i_one=i_one, i_two=i_two)
@@ -96,6 +98,10 @@ class VCOGeneticAlgorithm:
                     individual.protocol.steps[i].voltage)
                 individual.protocol.steps[i].duration = np.random.normal(
                     individual.protocol.steps[i].duration)
+
+    def _select(self, population: List[Individual]) -> None:
+        """Selects a list of """
+
 
     def _init_individual(self):
         """Initializes a individual with a randomized protocol."""

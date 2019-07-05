@@ -3,7 +3,6 @@
 Use the functions in this module in the main.py module.
 """
 import collections
-import os
 import random
 from typing import Dict, List, Union
 
@@ -66,7 +65,7 @@ def generate_error_over_generation_graph(
     # Check to ensure all config hyper parameters are the same.
     random_result = results[random.choice(list(results.keys()))]
     for i in results.values():
-        if not random_result.config.has_equal_hyperparameters(i.config):
+        if not random_result.config != i.config:
             raise ValueError('Results given do not have the same config.')
 
     legend_handles = []
@@ -168,7 +167,7 @@ def _make_parameter_scaling_examples(
 
 
 def run_comparison_experiment(
-        configs: List[ga_config.GeneticAlgorithmConfig],
+        configs: List[ga_config.ParameterTuningConfig],
         iterations: int
 ) -> Dict[str, List[genetic_algorithm_result.GeneticAlgorithmResult]]:
     """Runs a comparison between all the configs that were passed in."""
@@ -193,7 +192,7 @@ def run_comparison_experiment(
 
 
 def _has_equal_hyperparameters(
-        configs: List[ga_config.GeneticAlgorithmConfig]) -> bool:
+        configs: List[ga_config.ParameterTuningConfig]) -> bool:
     first_config = configs[0]
     for i in configs:
         if not first_config.has_equal_hyperparameters(i):
@@ -202,7 +201,7 @@ def _has_equal_hyperparameters(
 
 
 def _has_unique_protocols(
-        configs: List[ga_config.GeneticAlgorithmConfig]) -> bool:
+        configs: List[ga_config.ParameterTuningConfig]) -> bool:
     protocol_list = []
     for i in configs:
         if i.secondary_protocol:

@@ -9,7 +9,7 @@ import protocols
 class TestGeneticAlgorithmResult(unittest.TestCase):
 
     def setUp(self):
-        config = ga_config.GeneticAlgorithmConfig(
+        config = ga_config.ParameterTuningConfig(
             population_size=2,
             max_generations=2,
             protocol=protocols.SingleActionPotentialProtocol(),
@@ -18,8 +18,9 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
                 ga_config.Parameter(name='g_na', default_value=3600.)],
             params_lower_bound=0.9,
             params_upper_bound=1.1,
-            crossover_probability=0.9,
-            parameter_swap_probability=0.5,
+            mate_probability=0.9,
+            mutate_probability=1.,
+            gene_swap_probability=0.5,
             gene_mutation_probability=0.15,
             tournament_size=2)
         self.ga_result = genetic_algorithm_result.GeneticAlgorithmResult(
