@@ -1,7 +1,7 @@
 """Contains protocols to act in silico to probe cellular mechanics."""
 
 import bisect
-from typing import List
+from typing import List, Union
 
 
 class SingleActionPotentialProtocol:
@@ -145,3 +145,10 @@ class VoltageClampProtocol:
         else:
             return (self.voltage_change_endpoints[index - 1],
                     self.voltage_change_endpoints[index])
+
+
+PROTOCOL_TYPE = Union[
+    SingleActionPotentialProtocol,
+    IrregularPacingProtocol,
+    VoltageClampProtocol,
+]

@@ -212,7 +212,7 @@ def _has_unique_protocols(
 
 
 def run_experiment(
-        config: ga_config.GeneticAlgorithmConfig,
+        config: ga_config.ParameterTuningConfig,
         full_output: bool=False
 ) -> genetic_algorithm_result.GeneticAlgorithmResult:
     ga = genetic_algorithm.GeneticAlgorithm(config=config)

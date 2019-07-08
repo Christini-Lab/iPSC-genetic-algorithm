@@ -67,7 +67,6 @@ class GeneticAlgorithmResult:
                                    extreme_type: ExtremeType):
         """Retrieves either the best or worst individual given a generation."""
         top_error_individual = self.get_individual(generation, 0)
-
         for i in range(len(self.generations[generation])):
             individual = self.get_individual(generation, i)
             if (extreme_type == ExtremeType.BEST and
@@ -76,7 +75,6 @@ class GeneticAlgorithmResult:
             elif (extreme_type == ExtremeType.WORST and
                     individual.error > top_error_individual.error):
                 top_error_individual = individual
-
         return top_error_individual
 
     def get_parameter_scales(self, individual):
@@ -157,6 +155,7 @@ class GeneticAlgorithmResult:
 
     def graph_individual(self, individual):
         """Graphs an individual's trace."""
+        plt.figure()
         if isinstance(self.config.protocol, protocols.VoltageClampProtocol):
             self.baseline_trace.plot_only_currents(color='black')
         else:

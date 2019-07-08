@@ -2,14 +2,8 @@
 
 from __future__ import annotations
 
-from typing import List, Union, Tuple
+from typing import List, Tuple
 import protocols
-
-PROTOCOL_TYPE = Union[
-    protocols.SingleActionPotentialProtocol,
-    protocols.IrregularPacingProtocol,
-    protocols.VoltageClampProtocol
-]
 
 
 class Parameter:
@@ -31,7 +25,7 @@ class Parameter:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __eq__(self, other):
+    def __eq__(self, other: Parameter) -> bool:
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
 
@@ -68,10 +62,11 @@ class GeneticAlgorithmConfig:
         self.gene_mutation_probability = gene_mutation_probability
         self.tournament_size = tournament_size
 
-    def has_equal_hyperparameters(self, other: GeneticAlgorithmConfig):
+    def has_equal_hyperparameters(self, other: GeneticAlgorithmConfig) -> bool:
         return (self.population_size == other.population_size and
                 self.max_generations == other.max_generations and
                 self.mate_probability == other.mate_probability and
+                self.mutate_probability == other.mutate_probability and
                 self.gene_swap_probability == other.gene_swap_probability and
                 self.gene_mutation_probability ==
                 other.gene_mutation_probability and
@@ -105,39 +100,39 @@ class ParameterTuningConfig(GeneticAlgorithmConfig):
     VC_MAX_ERROR = 130
 
     def __init__(self,
-                 protocol: PROTOCOL_TYPE,
+                 protocol: protocols.PROTOCOL_TYPE,
                  params_lower_bound: float,
                  params_upper_bound: float,
                  tunable_parameters: List[Parameter],
-                 mate_probability: float,
-                 mutate_probability: float,
                  population_size: int,
                  max_generations: int,
+                 mate_probability: float,
+                 mutate_probability: float,
                  gene_swap_probability: float,
                  gene_mutation_probability: float,
                  tournament_size: int,
-                 secondary_protocol: PROTOCOL_TYPE=None) -> None:
+                 secondary_protocol: protocols.PROTOCOL_TYPE=None) -> None:
         self.protocol = protocol
-        self.tunable_parameters = tunable_parameters
         self.params_lower_bound = params_lower_bound
         self.params_upper_bound = params_upper_bound
+        self.tunable_parameters = tunable_parameters
         self.secondary_protocol = secondary_protocol
         super().__init__(
             population_size=population_size,
             max_generations=max_generations,
             mate_probability=mate_probability,
-            gene_swap_probability=gene_swap_probability,
             mutate_probability=mutate_probability,
+            gene_swap_probability=gene_swap_probability,
             gene_mutation_probability=gene_mutation_probability,
             tournament_size=tournament_size)
 
-    def has_equal_hyperparameters(self, other: ParameterTuningConfig):
+    def has_equal_hyperparameters(self, other: ParameterTuningConfig) -> bool:
         return (super().has_equal_hyperparameters(other=other) and
                 self.params_lower_bound == other.params_lower_bound and
                 self.params_upper_bound == other.params_upper_bound)
 
 
-def get_appropriate_max_error(protocol: PROTOCOL_TYPE) -> int:
+def get_appropriate_max_error(protocol: protocols.PROTOCOL_TYPE) -> int:
     if isinstance(protocol, protocols.SingleActionPotentialProtocol):
         return ParameterTuningConfig.SAP_MAX_ERROR
     elif isinstance(protocol, protocols.IrregularPacingProtocol):
@@ -165,10 +160,10 @@ class VoltageOptimizationConfig(GeneticAlgorithmConfig):
                  steps_in_protocol: int,
                  step_duration_bounds: Tuple[float, float],
                  step_voltage_bounds: Tuple[float, float],
-                 mate_probability: float,
-                 mutation_probability: float,
                  population_size: int,
                  max_generations: int,
+                 mate_probability: float,
+                 mutation_probability: float,
                  gene_swap_probability: float,
                  gene_mutation_probability: float,
                  tournament_size: int):

@@ -215,7 +215,7 @@ class GeneticAlgorithm:
         return toolbox
 
 
-def _evaluate_performance_based_on_protocol(protocol: ga_config.PROTOCOL_TYPE,
+def _evaluate_performance_based_on_protocol(protocol: protocols.PROTOCOL_TYPE,
                                             baseline_trace: trace.Trace,
                                             indiv_trace: trace.Trace) -> float:
     if (isinstance(protocol, protocols.SingleActionPotentialProtocol) or

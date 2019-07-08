@@ -574,7 +574,7 @@ class PaciModel:
 
 
 def generate_trace(tunable_parameters: List[ga_config.Parameter],
-                   protocol: ga_config.PROTOCOL_TYPE,
+                   protocol: protocols.PROTOCOL_TYPE,
                    params: List[float]=None) -> trace.Trace:
     """Generates a trace.
 
