@@ -112,11 +112,6 @@ class ParameterTuningConfig(GeneticAlgorithmConfig):
                  gene_mutation_probability: float,
                  tournament_size: int,
                  secondary_protocol: protocols.PROTOCOL_TYPE=None) -> None:
-        self.protocol = protocol
-        self.params_lower_bound = params_lower_bound
-        self.params_upper_bound = params_upper_bound
-        self.tunable_parameters = tunable_parameters
-        self.secondary_protocol = secondary_protocol
         super().__init__(
             population_size=population_size,
             max_generations=max_generations,
@@ -125,6 +120,11 @@ class ParameterTuningConfig(GeneticAlgorithmConfig):
             gene_swap_probability=gene_swap_probability,
             gene_mutation_probability=gene_mutation_probability,
             tournament_size=tournament_size)
+        self.protocol = protocol
+        self.params_lower_bound = params_lower_bound
+        self.params_upper_bound = params_upper_bound
+        self.tunable_parameters = tunable_parameters
+        self.secondary_protocol = secondary_protocol
 
     def has_equal_hyperparameters(self, other: ParameterTuningConfig) -> bool:
         return (super().has_equal_hyperparameters(other=other) and
@@ -163,19 +163,20 @@ class VoltageOptimizationConfig(GeneticAlgorithmConfig):
                  population_size: int,
                  max_generations: int,
                  mate_probability: float,
-                 mutation_probability: float,
+                 mutate_probability: float,
                  gene_swap_probability: float,
                  gene_mutation_probability: float,
                  tournament_size: int):
-        self.contribution_step = contribution_step
-        self.steps_in_protocol = steps_in_protocol
-        self.step_duration_bounds = step_duration_bounds
-        self.step_voltage_bounds = step_voltage_bounds
         super().__init__(
             population_size=population_size,
             max_generations=max_generations,
             mate_probability=mate_probability,
-            mutate_probability=mutation_probability,
+            mutate_probability=mutate_probability,
             gene_swap_probability=gene_swap_probability,
             gene_mutation_probability=gene_mutation_probability,
             tournament_size=tournament_size)
+        self.contribution_step = contribution_step
+        self.steps_in_protocol = steps_in_protocol
+        self.step_duration_bounds = step_duration_bounds
+        self.step_voltage_bounds = step_voltage_bounds
+

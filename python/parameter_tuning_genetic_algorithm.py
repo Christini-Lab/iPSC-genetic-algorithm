@@ -1,9 +1,9 @@
-"""Runs a genetic algorithm on the specified target objective.
+"""Runs a genetic algorithm for parameter tuning on specified target objective.
 
 Example usage:
     config = <GENERATE CONFIG OBJECT>
-    genetic_algorithm_instance = GeneticAlgorithm(config)
-    genetic_algorithm_instance.run()
+    ga_instance = ParameterTuningGeneticAlgorithm(config)
+    ga_instance.run()
 """
 
 import random
@@ -15,25 +15,25 @@ from deap import tools
 import numpy as np
 import scipy.interpolate
 
-import ga_config
-import genetic_algorithm_result
+import ga_configs
+import genetic_algorithm_results
 import paci_2018
 import protocols
 import trace
 
 
-class GeneticAlgorithm:
-    """Encapsulates state and behavior of a genetic algorithm.
+class ParameterTuningGeneticAlgorithm:
+    """Encapsulates state and behavior of a parameter tuning genetic algorithm.
 
     Attributes:
-        config: A config object specifying genetic algorithm hyperparameters.
+        config: A config object specifying algorithm hyperparameters.
         baseline_trace: Trace which will serve as the algorithm's target
             objective.
         secondary_baseline_trace: Trace which will, in conjunction with the
             baseline trace, serve as the algorithm's target objective.
     """
 
-    def __init__(self, config: ga_config.ParameterTuningConfig) -> None:
+    def __init__(self, config: ga_configs.ParameterTuningConfig) -> None:
         self.config = config
         self.baseline_trace = paci_2018.generate_trace(
             tunable_parameters=config.tunable_parameters,
@@ -44,13 +44,12 @@ class GeneticAlgorithm:
                 tunable_parameters=config.tunable_parameters,
                 protocol=config.secondary_protocol)
 
-    def run(self) -> genetic_algorithm_result.GeneticAlgorithmResult:
+    def run(self) -> genetic_algorithm_results.GAResultParameterTuning:
         """Runs an instance of the genetic algorithm."""
         toolbox = self._configure_toolbox()
         population = toolbox.population(self.config.population_size)
-        ga_result = genetic_algorithm_result.GeneticAlgorithmResult(
-            config=self.config,
-            baseline_trace=self.baseline_trace)
+        ga_result = genetic_algorithm_results.GAResultParameterTuning(
+            config=self.config)
 
         print('Evaluating initial population.')
         for individual in population:
@@ -60,9 +59,9 @@ class GeneticAlgorithm:
         initial_population = []
         for i in range(len(population)):
             initial_population.append(
-                genetic_algorithm_result.IndividualResult(
-                    param_set=population[i][0],
-                    error=population[i].fitness.values[0]))
+                genetic_algorithm_results.ParameterTuningIndividual(
+                    parameters=population[i][0],
+                    fitness=population[i].fitness.values[0]))
         ga_result.generations.append(initial_population)
 
         for generation in range(1, self.config.max_generations):
@@ -97,9 +96,9 @@ class GeneticAlgorithm:
             intermediate_population = []
             for i in range(len(population)):
                 intermediate_population.append(
-                    genetic_algorithm_result.IndividualResult(
-                        param_set=population[i][0],
-                        error=population[i].fitness.values[0]))
+                    genetic_algorithm_results.ParameterTuningIndividual(
+                        parameters=population[i][0],
+                        fitness=population[i].fitness.values[0]))
             ga_result.generations.append(intermediate_population)
 
             generate_statistics(population)
@@ -121,7 +120,7 @@ class GeneticAlgorithm:
             params=new_parameters)
 
         if not primary_trace:
-            error = ga_config.get_appropriate_max_error(
+            error = ga_configs.get_appropriate_max_error(
                 protocol=self.config.protocol)
         else:
             error = _evaluate_performance_based_on_protocol(
@@ -136,7 +135,7 @@ class GeneticAlgorithm:
                 params=new_parameters)
 
             if not secondary_trace:
-                error += ga_config.get_appropriate_max_error(
+                error += ga_configs.get_appropriate_max_error(
                     protocol=self.config.secondary_protocol)
             else:
                 error += _evaluate_performance_based_on_protocol(
@@ -207,11 +206,12 @@ class GeneticAlgorithm:
             tools.initRepeat,
             list,
             toolbox.individual)
-        toolbox.register('evaluate', GeneticAlgorithm._evaluate_performance)
+        toolbox.register(
+            'evaluate', ParameterTuningGeneticAlgorithm._evaluate_performance)
         toolbox.register('select', tools.selTournament,
                          tournsize=self.config.tournament_size)
-        toolbox.register('mate', GeneticAlgorithm._mate)
-        toolbox.register('mutate', GeneticAlgorithm._mutate)
+        toolbox.register('mate', ParameterTuningGeneticAlgorithm._mate)
+        toolbox.register('mutate', ParameterTuningGeneticAlgorithm._mutate)
         return toolbox
 
 

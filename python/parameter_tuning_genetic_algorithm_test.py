@@ -3,21 +3,29 @@ import random
 
 import numpy as np
 
-import ga_config
-import genetic_algorithm
+import ga_configs
+import parameter_tuning_genetic_algorithm
 import protocols
 
 
-class TestGeneticAlgorithm(unittest.TestCase):
+class CustomAssertions:
+
+    def assertInBounds(self, bounds, values):
+        for i in range(len(bounds)):
+            if values[i] < bounds[i][0] or values[i] > bounds[i][1]:
+                raise AssertionError('Values exceed bounds.')
+
+
+class TestParameterTuningGeneticAlgorithm(unittest.TestCase, CustomAssertions):
 
     def setUp(self):
-        config = ga_config.ParameterTuningConfig(
+        config = ga_configs.ParameterTuningConfig(
             population_size=2,
             max_generations=2,
             protocol=protocols.SingleActionPotentialProtocol(),
             tunable_parameters=[
-                ga_config.Parameter(name='g_b_na', default_value=0.95),
-                ga_config.Parameter(name='g_na', default_value=3671.2302)],
+                ga_configs.Parameter(name='g_b_na', default_value=0.95),
+                ga_configs.Parameter(name='g_na', default_value=3671.2302)],
             params_lower_bound=0.9,
             params_upper_bound=1.1,
             mutate_probability=1.0,
@@ -25,7 +33,8 @@ class TestGeneticAlgorithm(unittest.TestCase):
             gene_swap_probability=0.5,
             gene_mutation_probability=0.15,
             tournament_size=2)
-        self.ga = genetic_algorithm.GeneticAlgorithm(config=config)
+        self.ga = parameter_tuning_genetic_algorithm.\
+            ParameterTuningGeneticAlgorithm(config=config)
 
     def test_evaluate_performance_with_default(self):
         error = self.ga._evaluate_performance()
@@ -43,15 +52,13 @@ class TestGeneticAlgorithm(unittest.TestCase):
         self.assertGreater(error, 0)
 
     def test_evaluate_performance_with_combined_protocol(self):
-        # TODO MOVE UP
-        random.seed(2)
-        config = ga_config.ParameterTuningConfig(
+        config = ga_configs.ParameterTuningConfig(
             population_size=2,
             max_generations=2,
             protocol=protocols.SingleActionPotentialProtocol(),
             tunable_parameters=[
-                ga_config.Parameter(name='g_b_na', default_value=0.95),
-                ga_config.Parameter(name='g_na', default_value=3671.2302)],
+                ga_configs.Parameter(name='g_b_na', default_value=0.95),
+                ga_configs.Parameter(name='g_na', default_value=3671.2302)],
             params_lower_bound=0.9,
             params_upper_bound=1.1,
             mutate_probability=1.,
@@ -59,14 +66,16 @@ class TestGeneticAlgorithm(unittest.TestCase):
             gene_swap_probability=0.5,
             gene_mutation_probability=0.15,
             tournament_size=2)
-        single_ap_ga = genetic_algorithm.GeneticAlgorithm(config=config)
+        single_ap_ga = parameter_tuning_genetic_algorithm.\
+            ParameterTuningGeneticAlgorithm(config=config)
         single_ap_error = single_ap_ga._evaluate_performance(
             new_parameters=[0.94, 3000.])
 
         config.secondary_protocol = protocols.IrregularPacingProtocol(
             duration=5,
             stimulation_offsets=[0.1, 0.2])
-        combined_protocol_ga = genetic_algorithm.GeneticAlgorithm(config=config)
+        combined_protocol_ga = parameter_tuning_genetic_algorithm.\
+            ParameterTuningGeneticAlgorithm(config=config)
         combined_protocol_error = combined_protocol_ga._evaluate_performance(
             new_parameters=[0.94, 3000.])
 
@@ -89,28 +98,34 @@ class TestGeneticAlgorithm(unittest.TestCase):
     def test_mutate(self):
         individual = [[0.96, 3400.]]
 
-        # With seed set to 4, the next two calls to random.random() will return
-        # 0.23 and 0.10, respectively. Because gene mutation probability is set
-        # to 0.15, only the second parameter will be mutated.
-        random.seed(4)
+        for i in range(500):
+            random.seed(i)
+            r_num_one = random.random()
+            r_num_two = random.random()
+            if r_num_two < self.ga.config.gene_mutation_probability < r_num_one:
+                random.seed(i)
+                break
+        else:
+            self.fail(msg='Could not find seed to meet required behavior.')
 
-        # With seed set to 4, the next random number, drawn from the normal
-        # distribution centered around 3400., will be 3400.050561707143.
         np.random.seed(4)
+        random_val = np.random.normal(3400)
+        np.random.seed(4)
+
         self.ga._mutate(individual)
 
-        self.assertListEqual(individual, [[0.96, 3400.050561707143]])
+        self.assertListEqual(individual, [[0.96, random_val]])
 
     def test_initialize_parameters(self):
-        # With seed set to 5, random parameters initialized from default values
-        # according to lower and upper bounds, will be 0.9733513220290433 and
-        # 3848.7613393882134, respectively.
-        random.seed(5)
-        new_parameters = self.ga._initialize_parameters()
+        param_bounds = []
+        for i in self.ga.config.tunable_parameters:
+            param_bounds.append(
+                (i.default_value * self.ga.config.params_lower_bound,
+                 i.default_value * self.ga.config.params_upper_bound))
 
-        self.assertListEqual(
-            new_parameters,
-            [0.9733513220290433, 3848.7613393882134])
+        for i in range(10):
+            new_parameters = self.ga._initialize_parameters()
+            self.assertInBounds(bounds=param_bounds, values=new_parameters)
 
     def test_configure_toolbox(self):
         toolbox = self.ga._configure_toolbox()

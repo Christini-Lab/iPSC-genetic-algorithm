@@ -11,9 +11,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-import ga_config
-import genetic_algorithm
-import genetic_algorithm_result
+import ga_configs
+import parameter_tuning_genetic_algorithm
+import genetic_algorithm_results
 import paci_2018
 import protocols
 
@@ -37,7 +37,7 @@ def _graph_error_over_generation(result, color, label):
     best_individual_errors = []
 
     for i in range(len(result.generations)):
-        best_individual_errors.append(result.get_best_individual(i).error)
+        best_individual_errors.append(result.get_high_fitness_individual(i).fitness)
 
     best_individual_error_line, = plt.plot(
         range(len(result.generations)),
@@ -47,20 +47,22 @@ def _graph_error_over_generation(result, color, label):
     return best_individual_error_line
 
 
-def _plot_error_scatter(result: genetic_algorithm_result.GeneticAlgorithmResult,
-                        color: str) -> None:
+def _plot_error_scatter(
+        result: genetic_algorithm_results.GeneticAlgorithmResult,
+        color: str) -> None:
+    # TODO refactor to make use of class method and pass in color attribute
     x_data = []
     y_data = []
     for i in range(result.config.max_generations):
         for j in range(result.config.population_size):
             x_data.append(j)
             y_data.append(
-                result.get_individual(generation=i, index=j).error)
+                result.get_individual(generation=i, index=j).fitness)
     plt.scatter(x_data, y_data, alpha=0.3, color=color)
 
 
 def generate_error_over_generation_graph(
-        results: Dict[str, genetic_algorithm_result.GeneticAlgorithmResult]
+        results: Dict[str, genetic_algorithm_results.GeneticAlgorithmResult]
 ) -> None:
     # Check to ensure all config hyper parameters are the same.
     random_result = results[random.choice(list(results.keys()))]
@@ -89,14 +91,14 @@ def generate_error_over_generation_graph(
 
 def generate_parameter_scaling_figure(
         results: Dict[str,
-                      List[genetic_algorithm_result.GeneticAlgorithmResult]]
+                      List[genetic_algorithm_results.GAResultParameterTuning]]
 ) -> None:
     examples = []
     for key, val in results.items():
         temp_examples = []
         tunable_params = val[0].config.tunable_parameters
         for result in val:
-            best_individual = result.get_best_individual(
+            best_individual = result.get_high_fitness_individual(
                 result.config.max_generations - 1)
             temp_examples.append(result.get_parameter_scales(best_individual))
         examples.extend(_make_parameter_scaling_examples(
@@ -127,7 +129,7 @@ def generate_parameter_scaling_figure(
 
 def generate_error_strip_plot(
         results: Dict[str,
-                      List[genetic_algorithm_result.GeneticAlgorithmResult]]
+                      List[genetic_algorithm_results.GeneticAlgorithmResult]]
 ) -> None:
     df = _generate_error_strip_plot_data_frame(results=results)
     plt.figure()
@@ -141,15 +143,15 @@ def generate_error_strip_plot(
 
 def _generate_error_strip_plot_data_frame(
         results: Dict[str,
-                      List[genetic_algorithm_result.GeneticAlgorithmResult]]
+                      List[genetic_algorithm_results.GeneticAlgorithmResult]]
 ) -> pd.DataFrame:
     errors = []
     protocol_types = []
     for key, val in results.items():
         for result in val:
-            best_individual = result.get_best_individual(
+            best_individual = result.get_high_fitness_individual(
                 generation=result.config.max_generations - 1)
-            errors.append(best_individual.error)
+            errors.append(best_individual.fitness)
             protocol_types.append(key)
     return pd.DataFrame(data={'Error': errors, 'Protocol Type': protocol_types})
 
@@ -157,7 +159,7 @@ def _generate_error_strip_plot_data_frame(
 def _make_parameter_scaling_examples(
         params: List[List[float]],
         protocol_type: str,
-        default_params: List[ga_config.Parameter]
+        default_params: List[ga_configs.Parameter]
 ) -> List[List[Union[float, str, str]]]:
     examples = []
     for i in params:
@@ -167,9 +169,9 @@ def _make_parameter_scaling_examples(
 
 
 def run_comparison_experiment(
-        configs: List[ga_config.ParameterTuningConfig],
+        configs: List[ga_configs.ParameterTuningConfig],
         iterations: int
-) -> Dict[str, List[genetic_algorithm_result.GeneticAlgorithmResult]]:
+) -> Dict[str, List[genetic_algorithm_results.GeneticAlgorithmResult]]:
     """Runs a comparison between all the configs that were passed in."""
     if not _has_equal_hyperparameters(configs=configs):
         raise ValueError('Configs do not have the same hyper parameters.')
@@ -192,7 +194,7 @@ def run_comparison_experiment(
 
 
 def _has_equal_hyperparameters(
-        configs: List[ga_config.ParameterTuningConfig]) -> bool:
+        configs: List[ga_configs.ParameterTuningConfig]) -> bool:
     first_config = configs[0]
     for i in configs:
         if not first_config.has_equal_hyperparameters(i):
@@ -201,7 +203,7 @@ def _has_equal_hyperparameters(
 
 
 def _has_unique_protocols(
-        configs: List[ga_config.ParameterTuningConfig]) -> bool:
+        configs: List[ga_configs.ParameterTuningConfig]) -> bool:
     protocol_list = []
     for i in configs:
         if i.secondary_protocol:
@@ -212,10 +214,10 @@ def _has_unique_protocols(
 
 
 def run_experiment(
-        config: ga_config.ParameterTuningConfig,
+        config: ga_configs.ParameterTuningConfig,
         full_output: bool=False
-) -> genetic_algorithm_result.GeneticAlgorithmResult:
-    ga = genetic_algorithm.GeneticAlgorithm(config=config)
+) -> genetic_algorithm_results.GeneticAlgorithmResult:
+    ga = parameter_tuning_genetic_algorithm.ParameterTuningGeneticAlgorithm(config=config)
     ga_result = ga.run()
 
     if full_output:
@@ -223,11 +225,11 @@ def run_experiment(
         ga_result.graph_error_over_generation(with_scatter=False)
 
         random_0 = ga_result.get_random_individual(generation=0)
-        worst_0 = ga_result.get_worst_individual(generation=0)
-        best_0 = ga_result.get_best_individual(generation=0)
-        best_middle = ga_result.get_best_individual(
+        worst_0 = ga_result.get_low_fitness_individual(generation=0)
+        best_0 = ga_result.get_high_fitness_individual(generation=0)
+        best_middle = ga_result.get_high_fitness_individual(
             generation=config.max_generations // 2)
-        best_end = ga_result.get_best_individual(
+        best_end = ga_result.get_high_fitness_individual(
             generation=config.max_generations - 1)
 
         ga_result.graph_individual_with_param_set(

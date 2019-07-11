@@ -1,7 +1,7 @@
 import unittest
 
 import experiments
-import ga_config
+import ga_configs
 import protocols
 
 
@@ -11,8 +11,8 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
         params = [[1, 2], [1.5, 3]]
         protocol_type = 'SAP'
         default_params = [
-            ga_config.Parameter(name='g_na', default_value=15),
-            ga_config.Parameter(name='g_ca', default_value=1),
+            ga_configs.Parameter(name='g_na', default_value=15),
+            ga_configs.Parameter(name='g_ca', default_value=1),
         ]
 
         examples = experiments._make_parameter_scaling_examples(
@@ -44,11 +44,11 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
 
     def test_run_comparing_experiment_raises_value_error_double_protocol(self):
         parameters = [
-            ga_config.Parameter(name='g_na', default_value=3671.2302),
-            ga_config.Parameter(name='g_f_s', default_value=30.10312),
+            ga_configs.Parameter(name='g_na', default_value=3671.2302),
+            ga_configs.Parameter(name='g_f_s', default_value=30.10312),
         ]
         sap_protocol = protocols.SingleActionPotentialProtocol()
-        sap_config = ga_config.ParameterTuningConfig(
+        sap_config = ga_configs.ParameterTuningConfig(
             population_size=2,
             max_generations=2,
             protocol=sap_protocol,
@@ -85,8 +85,8 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
 
 def generate_config_list():
     parameters = [
-        ga_config.Parameter(name='g_na', default_value=3671.2302),
-        ga_config.Parameter(name='g_f_s', default_value=30.10312),
+        ga_configs.Parameter(name='g_na', default_value=3671.2302),
+        ga_configs.Parameter(name='g_f_s', default_value=30.10312),
     ]
     sap_protocol = protocols.SingleActionPotentialProtocol()
     ip_protocol = protocols.IrregularPacingProtocol(
@@ -101,7 +101,7 @@ def generate_config_list():
             protocols.VoltageClampStep(duration=0.15, voltage=0.02),
             protocols.VoltageClampStep(duration=0.025, voltage=-0.08),
             protocols.VoltageClampStep(duration=0.3, voltage=0.04)])
-    sap_config = ga_config.ParameterTuningConfig(
+    sap_config = ga_configs.ParameterTuningConfig(
         population_size=2,
         max_generations=2,
         protocol=sap_protocol,
@@ -113,7 +113,7 @@ def generate_config_list():
         gene_swap_probability=0.5,
         gene_mutation_probability=0.1,
         tournament_size=2)
-    ip_config = ga_config.ParameterTuningConfig(
+    ip_config = ga_configs.ParameterTuningConfig(
         population_size=2,
         max_generations=2,
         protocol=ip_protocol,
@@ -125,7 +125,7 @@ def generate_config_list():
         gene_swap_probability=0.5,
         gene_mutation_probability=0.1,
         tournament_size=2)
-    vc_config = ga_config.ParameterTuningConfig(
+    vc_config = ga_configs.ParameterTuningConfig(
         population_size=2,
         max_generations=2,
         protocol=vc_protocol,
@@ -137,7 +137,7 @@ def generate_config_list():
         gene_swap_probability=0.5,
         gene_mutation_probability=0.1,
         tournament_size=2)
-    combined_config = ga_config.ParameterTuningConfig(
+    combined_config = ga_configs.ParameterTuningConfig(
         population_size=2,
         max_generations=2,
         protocol=ip_protocol,

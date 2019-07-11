@@ -4,7 +4,7 @@ from typing import List
 import numpy as np
 from scipy import integrate
 
-import ga_config
+import ga_configs
 import protocols
 import trace
 
@@ -573,7 +573,7 @@ class PaciModel:
         return d_y
 
 
-def generate_trace(tunable_parameters: List[ga_config.Parameter],
+def generate_trace(tunable_parameters: List[ga_configs.Parameter],
                    protocol: protocols.PROTOCOL_TYPE,
                    params: List[float]=None) -> trace.Trace:
     """Generates a trace.
