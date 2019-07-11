@@ -1,8 +1,8 @@
-"""Main driver for program. Use functions in experiments.py to run GAs."""
+"""Main driver for program. Use functions in parameter_tuning_experiments.py to run GAs."""
 
 import os
 
-import experiments
+import parameter_tuning_experiments
 import protocols
 import ga_configs
 
@@ -67,7 +67,7 @@ IP_CONFIG = ga_configs.ParameterTuningConfig(
 
 
 def main():
-    experiments.run_experiment(config=SAP_CONFIG, full_output=True)
+    parameter_tuning_experiments.run_param_tuning_experiment(config=SAP_CONFIG, full_output=True)
 
 
 if __name__ == '__main__':

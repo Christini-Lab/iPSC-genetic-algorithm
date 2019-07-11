@@ -1,11 +1,11 @@
 import unittest
 
-import experiments
+import parameter_tuning_experiments
 import ga_configs
 import protocols
 
 
-class TestGeneticAlgorithmResult(unittest.TestCase):
+class TestParameterTuningExperiments(unittest.TestCase):
 
     def test_make_parameter_scaling_examples(self):
         params = [[1, 2], [1.5, 3]]
@@ -15,7 +15,7 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
             ga_configs.Parameter(name='g_ca', default_value=1),
         ]
 
-        examples = experiments._make_parameter_scaling_examples(
+        examples = parameter_tuning_experiments._make_parameter_scaling_examples(
             params=params,
             protocol_type=protocol_type,
             default_params=default_params)
@@ -34,7 +34,7 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
         configs[0].params_lower_bound = 0.7
 
         with self.assertRaises(ValueError) as ve:
-            experiments.run_comparison_experiment(
+            parameter_tuning_experiments.run_comparison_experiment(
                 configs=configs,
                 iterations=2)
 
@@ -64,7 +64,7 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
         configs.append(sap_config)
 
         with self.assertRaises(ValueError) as ve:
-            experiments.run_comparison_experiment(
+            parameter_tuning_experiments.run_comparison_experiment(
                 configs=configs,
                 iterations=2)
 
@@ -74,7 +74,7 @@ class TestGeneticAlgorithmResult(unittest.TestCase):
 
     def test_run_comparison_experiment(self):
         configs = generate_config_list()
-        results = experiments.run_comparison_experiment(
+        results = parameter_tuning_experiments.run_comparison_experiment(
             configs=configs,
             iterations=2)
         self.assertIn('Single Action Potential', results)

@@ -14,6 +14,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 import seaborn as sns
 
+import ga_configs
 import paci_2018
 import protocols
 
@@ -154,8 +155,14 @@ class GeneticAlgorithmResult(ABC):
 
 
 class GAResultParameterTuning(GeneticAlgorithmResult):
+    """Contains information about a run of a parameter tuning genetic algorithm.
 
-    def __init__(self, config):
+    Attributes:
+        config: The config object used in the genetic algorithm run.
+        baseline_trace: The baseline trace of the genetic algorithm run.
+    """
+
+    def __init__(self, config: ga_configs.ParameterTuningConfig) -> None:
         super().__init__()
         self.config = config
         self.baseline_trace = paci_2018.generate_trace(
@@ -222,6 +229,18 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
         plt.title(title)
         plt.yticks(parameter_indices, parameter_indices)
         plt.xticks([i for i in range(4)], [i for i in range(4)])
+
+
+class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
+    """Contains information about a run of a parameter tuning genetic algorithm.
+
+    Attributes:
+        config: The config object used in the genetic algorithm run.
+    """
+
+    def __init__(self, config: ga_configs.VoltageOptimizationConfig) -> None:
+        super().__init__()
+        self.config = config
 
 
 class Individual:

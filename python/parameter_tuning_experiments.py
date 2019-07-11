@@ -186,7 +186,7 @@ def run_comparison_experiment(
             protocol_title = COMBINED_TITLE
         for i in range(iterations):
             print('Running {} GA iteration: {}'.format(protocol_title, i))
-            results[protocol_title].append(run_experiment(config))
+            results[protocol_title].append(run_param_tuning_experiment(config))
 
     generate_parameter_scaling_figure(results=results)
     generate_error_strip_plot(results=results)
@@ -213,11 +213,12 @@ def _has_unique_protocols(
     return len(protocol_list) == len(set(protocol_list))
 
 
-def run_experiment(
+def run_param_tuning_experiment(
         config: ga_configs.ParameterTuningConfig,
         full_output: bool=False
 ) -> genetic_algorithm_results.GeneticAlgorithmResult:
-    ga = parameter_tuning_genetic_algorithm.ParameterTuningGeneticAlgorithm(config=config)
+    ga = parameter_tuning_genetic_algorithm.ParameterTuningGeneticAlgorithm(
+        config=config)
     ga_result = ga.run()
 
     if full_output:
