@@ -3,6 +3,8 @@
 Additionally, the classes in this module allow for figure generation.
 """
 
+from __future__ import annotations
+
 from abc import ABC
 import enum
 import math
@@ -242,6 +244,39 @@ class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
         super().__init__()
         self.config = config
 
+    def generate_heatmap(self):
+        """Generates a heatmap showing error of individuals."""
+        data = []
+        for j in range(len(self.generations[0])):
+            row = []
+            for i in range(len(self.generations)):
+                row.append(self.generations[i][j].fitness)
+            data.append(row)
+        data = np.array(data)
+
+        plt.figure()
+        ax = sns.heatmap(
+            data,
+            cmap='RdBu',
+            xticklabels=2,
+            yticklabels=2)
+
+        hfont = {'fontname': 'Helvetica'}
+        plt.xlabel('Generation', **hfont)
+        plt.ylabel('Individual', **hfont)
+        ax.invert_yaxis()
+        ax.axhline(linewidth=4, color='black')
+        ax.axvline(linewidth=4, color='black')
+        ax.collections[0].colorbar.set_label('Fitness')
+        plt.savefig('figures/heatmap.png')
+
+
+def graph_vc_individual(individual: VCOptimizationIndividual) -> None:
+    plt.figure()
+    trace = paci_2018.generate_trace(protocol=individual.protocol)
+    trace.plot_with_currents()
+    plt.savefig('figures/vc_clamp_recent_individual.png')
+
 
 class Individual:
     """Represents an individual in a genetic algorithm population.
@@ -264,8 +299,8 @@ class ParameterTuningIndividual(Individual):
     """
 
     def __init__(self, parameters: List[float], fitness: float) -> None:
-        self.parameters = parameters
         super().__init__(fitness=fitness)
+        self.parameters = parameters
 
     def __str__(self):
         return ', '.join([str(i) for i in self.parameters])
@@ -290,6 +325,19 @@ class VCOptimizationIndividual(Individual):
 
     def __init__(self,
                  protocol: protocols.VoltageClampProtocol,
-                 fitness: float) -> None:
-        self.protocol = protocol
+                 fitness: float=0.0) -> None:
         super().__init__(fitness=fitness)
+        self.protocol = protocol
+
+    def __str__(self):
+        return str(self.fitness)
+
+    def __repr__(self):
+        return str(self.fitness)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (self.protocol == other.protocol and
+                    self.fitness == other.fitness)
+        else:
+            return False

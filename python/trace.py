@@ -122,10 +122,12 @@ class CurrentResponseInfo:
         self.protocol = protocol
         self.currents = []
 
-    def calculate_current_contribution(self,
-                                       timings: List[float],
-                                       start_t: float,
-                                       end_t: float) -> pd.DataFrame:
+    def calculate_current_contribution(
+            self,
+            timings: List[float],
+            start_t: float,
+            end_t: float,
+            target_currents: List[str]=None) -> pd.DataFrame:
         """Calculates the contribution of each current over a period of time."""
         start_index = _find_closest_t_index(timings, start_t)
         end_index = _find_closest_t_index(timings, end_t)
@@ -136,6 +138,12 @@ class CurrentResponseInfo:
             for j in self.currents[i]:
                 abs_j_value = abs(j.value)
                 total_current_sum += abs_j_value
+
+                # Only calculate current contributions of currents provided in
+                # target currents (if they were provided).
+                if target_currents and j.name not in target_currents:
+                    continue
+
                 if j.name in individual_sums:
                     individual_sums[j.name] += abs_j_value
                 else:

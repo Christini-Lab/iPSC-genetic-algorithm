@@ -1,10 +1,11 @@
-"""Main driver for program. Use functions in parameter_tuning_experiments.py to run GAs."""
+"""Main driver for program.
 
-import os
+Use functions in parameter_tuning_experiments.py to run GAs."""
 
 import parameter_tuning_experiments
 import protocols
 import ga_configs
+import voltage_clamp_optimization_experiments
 
 
 PARAMETERS = [
@@ -40,8 +41,8 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
 )
 
 SAP_CONFIG = ga_configs.ParameterTuningConfig(
-    population_size=4,
-    max_generations=4,
+    population_size=10,
+    max_generations=10,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.5,
@@ -65,9 +66,24 @@ IP_CONFIG = ga_configs.ParameterTuningConfig(
     gene_mutation_probability=0.1,
     tournament_size=2)
 
+VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
+    contribution_step=100,
+    steps_in_protocol=2,
+    step_duration_bounds=(0.9, 1.1),
+    step_voltage_bounds=(-1.2, .6),
+    target_currents=['i_kr'],
+    population_size=10,
+    max_generations=10,
+    mate_probability=0.9,
+    mutate_probability=0.9,
+    gene_swap_probability=0.2,
+    gene_mutation_probability=0.2,
+    tournament_size=3)
+
 
 def main():
-    parameter_tuning_experiments.run_param_tuning_experiment(config=SAP_CONFIG, full_output=True)
+    voltage_clamp_optimization_experiments.run_voltage_clamp_experiment(
+        config=VCO_CONFIG, full_output=True)
 
 
 if __name__ == '__main__':

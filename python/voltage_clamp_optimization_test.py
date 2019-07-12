@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 import ga_configs
+import genetic_algorithm_results
 import protocols
 import voltage_clamp_optimization
 
@@ -23,7 +24,7 @@ class VoltageClampOptimizationTest(unittest.TestCase):
             mutate_probability=1.0,
             gene_swap_probability=0.5,
             gene_mutation_probability=0.1,
-            tournament_size=2)
+            tournament_size=3)
         self.vc_ga = voltage_clamp_optimization.VCOGeneticAlgorithm(
             config=vc_ga_config)
 
@@ -52,8 +53,10 @@ class VoltageClampOptimizationTest(unittest.TestCase):
             self.fail(msg='Could not find seed to meet required behavior.')
 
         self.vc_ga._mate(
-            i_one=voltage_clamp_optimization.Individual(protocol=protocol_one),
-            i_two=voltage_clamp_optimization.Individual(protocol=protocol_two))
+            i_one=genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol_one),
+            i_two=genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol_two))
 
         expected_protocol_one = protocols.VoltageClampProtocol(
             steps=[
@@ -95,8 +98,9 @@ class VoltageClampOptimizationTest(unittest.TestCase):
 
         # TODO Fix random seed.
         np.random.seed(3)
-        self.vc_ga._mutate(individual=voltage_clamp_optimization.Individual(
-            protocol=protocol))
+        self.vc_ga._mutate(
+            individual=genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol))
         expected_protocol = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=1.0, duration=0.5),
@@ -116,7 +120,8 @@ class VoltageClampOptimizationTest(unittest.TestCase):
         )
 
         error = self.vc_ga._evaluate(
-            individual=voltage_clamp_optimization.Individual(protocol=protocol))
+            individual=genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol))
 
         self.assertEqual(error, 0)
 
@@ -129,7 +134,8 @@ class VoltageClampOptimizationTest(unittest.TestCase):
         )
 
         error = self.vc_ga._evaluate(
-            individual=voltage_clamp_optimization.Individual(protocol=protocol))
+            individual=genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol))
         self.assertGreater(error, 0)
 
     def test_calculate_fitness_score_from_contributions(self):
@@ -156,6 +162,58 @@ class VoltageClampOptimizationTest(unittest.TestCase):
                 self.assertTrue(
                     self.vc_ga.config.step_voltage_bounds[0] <= j.voltage <=
                     self.vc_ga.config.step_voltage_bounds[1])
+
+    def test_select(self):
+        protocol = protocols.VoltageClampProtocol(
+            steps=[
+                protocols.VoltageClampStep(voltage=0.2, duration=0.1),
+                protocols.VoltageClampStep(voltage=-0.3, duration=0.1865),
+            ]
+        )
+
+        population = [
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=0),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=5),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=1),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=3.4),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=8),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=10),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=2.2),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=1.2),
+        ]
+
+        random.seed(10)
+        new_population = self.vc_ga._select(population=population)
+
+        # Expected population was discovered through printing out
+        # random.sample() with seed set to 10.
+        expected_population = [
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=3.4),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=5),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=2.2),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=8),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=1.2),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=10),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=5),
+            genetic_algorithm_results.VCOptimizationIndividual(
+                protocol=protocol, fitness=10),
+        ]
+        self.assertListEqual(new_population, expected_population)
 
 
 if __name__ == '__main__':

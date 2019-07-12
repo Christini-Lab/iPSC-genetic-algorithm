@@ -1,6 +1,7 @@
 """Module level comment."""
 from __future__ import annotations
 
+import copy
 import random
 from typing import List
 
@@ -8,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 import ga_configs
+import genetic_algorithm_results
 import paci_2018
 import protocols
 
@@ -21,6 +23,10 @@ class VCOGeneticAlgorithm:
         print('Running GA.')
         population = self._init_population()
 
+        ga_result = genetic_algorithm_results.GAResultVoltageClampOptimization(
+            config=self.config)
+        ga_result.generations.append(population)
+
         print('Evaluating initial population.')
         for individual in population:
             individual.fitness = self._evaluate(individual=individual)
@@ -28,7 +34,7 @@ class VCOGeneticAlgorithm:
         for generation in range(1, self.config.max_generations):
             print('Generation {}'.format(generation))
 
-            # TODO call selection method here.
+            population = self._select(population=population)
 
             for i_one, i_two in zip(population[::2], population[1::2]):
                 if random.random() < self.config.mate_probability:
@@ -42,10 +48,15 @@ class VCOGeneticAlgorithm:
             for individual in population:
                 individual.fitness = self._evaluate(individual=individual)
 
+            ga_result.generations.append(population)
             generate_statistics(population)
 
-    def _evaluate(self,
-                  individual: Individual) -> int:
+        return ga_result
+
+    def _evaluate(
+            self,
+            individual: genetic_algorithm_results.VCOptimizationIndividual
+    ) -> int:
         """Evaluates the fitness of an individual.
 
         Fitness is determined by how well the voltage clamp protocol isolates
@@ -63,13 +74,15 @@ class VCOGeneticAlgorithm:
                 trace.current_response_info.calculate_current_contribution(
                     timings=trace.t,
                     start_t=trace.t[i],
-                    end_t=trace.t[i + self.config.contribution_step]))
+                    end_t=trace.t[i + self.config.contribution_step],
+                    target_currents=self.config.target_currents))
             i += self.config.contribution_step
         return _calc_fitness_score(contributions=contributions)
 
-    def _mate(self,
-              i_one: Individual,
-              i_two: Individual) -> None:
+    def _mate(
+            self,
+            i_one: genetic_algorithm_results.VCOptimizationIndividual,
+            i_two: genetic_algorithm_results.VCOptimizationIndividual) -> None:
         """Mates two individuals, modifies them in-place."""
         if len(i_one.protocol.steps) != len(i_two.protocol.steps):
             raise ValueError('Individuals do not have the same num of steps.')
@@ -79,8 +92,10 @@ class VCOGeneticAlgorithm:
                 i_one.protocol.steps[i], i_two.protocol.steps[i] = (
                     i_two.protocol.steps[i], i_one.protocol.steps[i])
 
-    def _mutate(self,
-                individual: Individual) -> None:
+    def _mutate(
+            self,
+            individual: genetic_algorithm_results.VCOptimizationIndividual
+    ) -> None:
         """Mutates an individual by choosing a number for norm. distribution."""
         for i in range(len(individual.protocol.steps)):
             if random.random() < self.config.gene_mutation_probability:
@@ -89,9 +104,20 @@ class VCOGeneticAlgorithm:
                 individual.protocol.steps[i].duration = np.random.normal(
                     individual.protocol.steps[i].duration)
 
-    def _select(self, population: List[Individual]) -> None:
+    def _select(
+            self,
+            population: List[
+                genetic_algorithm_results.VCOptimizationIndividual]
+    ) -> List[genetic_algorithm_results.VCOptimizationIndividual]:
         """Selects a list of individuals using tournament selection."""
-        pass
+        new_population = []
+        for i in range(len(population)):
+            tournament = random.sample(
+                population,
+                k=self.config.tournament_size)
+            best_individual = max(tournament, key=lambda j: j.fitness)
+            new_population.append(copy.deepcopy(best_individual))
+        return new_population
 
     def _init_individual(self):
         """Initializes a individual with a randomized protocol."""
@@ -101,7 +127,7 @@ class VCOGeneticAlgorithm:
                 voltage=random.uniform(*self.config.step_voltage_bounds),
                 duration=random.uniform(*self.config.step_duration_bounds))
             steps.append(random_step)
-        return Individual(
+        return genetic_algorithm_results.VCOptimizationIndividual(
             protocol=protocols.VoltageClampProtocol(steps=steps),
             fitness=0)
 
@@ -129,9 +155,3 @@ def generate_statistics(population):
     print('  Average fitness: {}'.format(np.mean(fitness_values)))
     print('  Standard deviation: {}'.format(np.std(fitness_values)))
 
-
-class Individual:
-
-    def __init__(self, protocol, fitness=0):
-        self.protocol = protocol
-        self.fitness = fitness

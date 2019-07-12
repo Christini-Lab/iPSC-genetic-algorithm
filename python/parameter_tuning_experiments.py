@@ -1,4 +1,4 @@
-"""Contains functions to run genetic algorithm experiments and plot results.
+"""Contains functions to run parameter tuning GA experiments and plots results.
 
 Use the functions in this module in the main.py module.
 """
@@ -226,11 +226,11 @@ def run_param_tuning_experiment(
         ga_result.graph_error_over_generation(with_scatter=False)
 
         random_0 = ga_result.get_random_individual(generation=0)
-        worst_0 = ga_result.get_low_fitness_individual(generation=0)
-        best_0 = ga_result.get_high_fitness_individual(generation=0)
-        best_middle = ga_result.get_high_fitness_individual(
+        worst_0 = ga_result.get_high_fitness_individual(generation=0)
+        best_0 = ga_result.get_low_fitness_individual(generation=0)
+        best_middle = ga_result.get_low_fitness_individual(
             generation=config.max_generations // 2)
-        best_end = ga_result.get_high_fitness_individual(
+        best_end = ga_result.get_low_fitness_individual(
             generation=config.max_generations - 1)
 
         ga_result.graph_individual_with_param_set(

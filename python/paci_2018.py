@@ -573,8 +573,8 @@ class PaciModel:
         return d_y
 
 
-def generate_trace(tunable_parameters: List[ga_configs.Parameter],
-                   protocol: protocols.PROTOCOL_TYPE,
+def generate_trace(protocol: protocols.PROTOCOL_TYPE,
+                   tunable_parameters: List[ga_configs.Parameter]=None,
                    params: List[float]=None) -> trace.Trace:
     """Generates a trace.
 
@@ -591,7 +591,7 @@ def generate_trace(tunable_parameters: List[ga_configs.Parameter],
         A Trace object.
     """
     new_params = dict()
-    if params:
+    if params and tunable_parameters:
         for i in range(len(params)):
             new_params[tunable_parameters[i].name] = params[i]
 
