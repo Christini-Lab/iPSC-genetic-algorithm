@@ -160,14 +160,14 @@ class VoltageOptimizationConfig(GeneticAlgorithmConfig):
                  steps_in_protocol: int,
                  step_duration_bounds: Tuple[float, float],
                  step_voltage_bounds: Tuple[float, float],
-                 target_currents: List[str],
                  population_size: int,
                  max_generations: int,
                  mate_probability: float,
                  mutate_probability: float,
                  gene_swap_probability: float,
                  gene_mutation_probability: float,
-                 tournament_size: int):
+                 tournament_size: int,
+                 target_currents: List[str] = None):
         super().__init__(
             population_size=population_size,
             max_generations=max_generations,
