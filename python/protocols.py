@@ -7,7 +7,8 @@ from typing import List, Union
 class SingleActionPotentialProtocol:
     """Encapsulates state and behavior of a single action potential protocol."""
 
-    AP_DURATION_SECS = 1.8
+    def __init__(self, duration: float=1.8):
+        self.duration = duration
 
 
 class IrregularPacingProtocol:

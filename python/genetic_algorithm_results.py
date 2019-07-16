@@ -3,8 +3,6 @@
 Additionally, the classes in this module allow for figure generation.
 """
 
-from __future__ import annotations
-
 from abc import ABC
 import enum
 import math
@@ -271,7 +269,7 @@ class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
         plt.savefig('figures/heatmap.png')
 
 
-def graph_vc_individual(individual: VCOptimizationIndividual) -> None:
+def graph_vc_individual(individual: 'VCOptimizationIndividual') -> None:
     plt.figure()
     trace = paci_2018.generate_trace(protocol=individual.protocol)
     trace.plot_with_currents()

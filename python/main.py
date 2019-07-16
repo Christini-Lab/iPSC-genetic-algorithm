@@ -82,8 +82,9 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
 
 
 def main():
-    voltage_clamp_optimization_experiments.run_voltage_clamp_experiment(
-        config=VCO_CONFIG, full_output=True)
+    parameter_tuning_experiments.run_param_tuning_experiment(
+        config=SAP_CONFIG,
+        full_output=True)
 
 
 if __name__ == '__main__':

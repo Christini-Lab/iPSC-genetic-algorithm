@@ -1,5 +1,4 @@
 """Module level comment."""
-from __future__ import annotations
 
 import copy
 import random
