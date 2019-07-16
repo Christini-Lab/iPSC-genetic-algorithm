@@ -4,7 +4,6 @@ import protocols
 import numpy.testing as tst
 import numpy as np
 import ga_configs
-import pdb
 
 class TestPaci2018(unittest.TestCase):
     def test_generate_trace_SAP(self):
