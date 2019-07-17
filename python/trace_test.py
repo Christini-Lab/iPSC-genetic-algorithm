@@ -166,6 +166,31 @@ class TraceTest(unittest.TestCase):
         # TODO implement.
         pass
 
+    def test_get_current(self):
+        currents = [
+            [
+                trace.Current(name='i_na', value=15),
+                trace.Current(name='i_ca', value=10),
+            ],
+            [
+                trace.Current(name='i_na', value=20),
+                trace.Current(name='i_ca', value=-5),
+            ],
+        ]
+        current_response_info = trace.CurrentResponseInfo(protocol=None)
+        current_response_info.currents = currents
+
+        i_na_values = current_response_info.get_single_current_values(
+            current_name='i_na')
+        i_ca_values = current_response_info.get_single_current_values(
+            current_name='i_ca')
+
+        expected_i_na_values = [15, 20]
+        expected_i_ca_values = [10, -5]
+
+        self.assertListEqual(i_na_values, expected_i_na_values)
+        self.assertListEqual(i_ca_values, expected_i_ca_values)
+
 
 if __name__ == '__main__':
     unittest.main()

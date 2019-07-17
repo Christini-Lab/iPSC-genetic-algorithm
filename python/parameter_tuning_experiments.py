@@ -265,11 +265,21 @@ def run_param_tuning_experiment(
 
 
 def plot_baseline_single_action_potential_trace():
-    model = paci_2018.PaciModel()
-    trace = model.generate_response(
-        protocol=protocols.SingleActionPotentialProtocol())
+    trace = paci_2018.generate_trace(
+        protocol=protocols.SingleActionPotentialProtocol(duration=30))
     trace.plot()
     plt.savefig('figures/baseline_single_action_potential_trace.png')
+
+
+def plot_all_in_system_of_equations(duration=10):
+    model = paci_2018.PaciModel()
+    model.generate_response(
+        protocol=protocols.SingleActionPotentialProtocol(duration=duration))
+
+    for i in range(len(model.y_names)):
+        plt.figure()
+        plt.plot([timestamp[i] for timestamp in model.full_y])
+        plt.savefig('figures/{}.png'.format(model.y_names[i]))
 
 
 def plot_baseline_irregular_pacing_trace():
@@ -286,14 +296,15 @@ def plot_baseline_irregular_pacing_trace():
 def plot_baseline_voltage_clamp_trace():
     model = paci_2018.PaciModel()
     steps = [
-        protocols.VoltageClampStep(duration=0.1, voltage=-0.08),
-        protocols.VoltageClampStep(duration=0.1, voltage=-0.12),
+        protocols.VoltageClampStep(duration=0.9, voltage=-0.08),
+        protocols.VoltageClampStep(duration=0.7, voltage=-0.12),
         protocols.VoltageClampStep(duration=0.5, voltage=-0.06),
-        protocols.VoltageClampStep(duration=0.05, voltage=-0.04),
-        protocols.VoltageClampStep(duration=0.15, voltage=0.02),
-        protocols.VoltageClampStep(duration=0.3, voltage=0.04),
+        protocols.VoltageClampStep(duration=0.9, voltage=-0.04),
+        protocols.VoltageClampStep(duration=0.95, voltage=0.02),
+        protocols.VoltageClampStep(duration=0.9, voltage=0.04),
     ]
     trace = model.generate_response(
         protocol=protocols.VoltageClampProtocol(steps=steps))
     trace.plot_with_currents()
     plt.savefig('figures/baseline_voltage_clamp_trace.png')
+

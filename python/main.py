@@ -68,22 +68,23 @@ IP_CONFIG = ga_configs.ParameterTuningConfig(
 
 VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     contribution_step=100,
-    steps_in_protocol=2,
-    step_duration_bounds=(0.9, 1.1),
-    step_voltage_bounds=(-1.2, .6),
-    target_currents=['i_kr'],
-    population_size=10,
-    max_generations=10,
+    steps_in_protocol=6,
+    step_duration_bounds=(0.05, 0.6),
+    step_voltage_bounds=(-.12, .06),
+    target_currents=None,  # Setting nones isolates all currents.
+    population_size=3,
+    max_generations=3,
     mate_probability=0.9,
     mutate_probability=0.9,
     gene_swap_probability=0.2,
     gene_mutation_probability=0.2,
-    tournament_size=3)
+    tournament_size=2)
 
 
 def main():
     voltage_clamp_optimization_experiments.run_voltage_clamp_experiment(
-        config=VCO_CONFIG, full_output=True)
+        config=VCO_CONFIG,
+        full_output=True)
 
 
 if __name__ == '__main__':

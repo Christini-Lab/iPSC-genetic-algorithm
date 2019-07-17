@@ -1,7 +1,5 @@
 """Contains classes used to configure the genetic algorithm."""
 
-from __future__ import annotations
-
 from typing import List, Tuple
 import protocols
 
@@ -25,7 +23,7 @@ class Parameter:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __eq__(self, other: Parameter) -> bool:
+    def __eq__(self, other: 'Parameter') -> bool:
         if isinstance(other, self.__class__):
             return self.__dict__ == other.__dict__
 
@@ -62,7 +60,8 @@ class GeneticAlgorithmConfig:
         self.gene_mutation_probability = gene_mutation_probability
         self.tournament_size = tournament_size
 
-    def has_equal_hyperparameters(self, other: GeneticAlgorithmConfig) -> bool:
+    def has_equal_hyperparameters(self,
+                                  other: 'GeneticAlgorithmConfig') -> bool:
         return (self.population_size == other.population_size and
                 self.max_generations == other.max_generations and
                 self.mate_probability == other.mate_probability and
@@ -126,7 +125,7 @@ class ParameterTuningConfig(GeneticAlgorithmConfig):
         self.tunable_parameters = tunable_parameters
         self.secondary_protocol = secondary_protocol
 
-    def has_equal_hyperparameters(self, other: ParameterTuningConfig) -> bool:
+    def has_equal_hyperparameters(self, other: 'ParameterTuningConfig') -> bool:
         return (super().has_equal_hyperparameters(other=other) and
                 self.params_lower_bound == other.params_lower_bound and
                 self.params_upper_bound == other.params_upper_bound)

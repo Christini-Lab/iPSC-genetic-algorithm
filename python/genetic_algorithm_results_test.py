@@ -1,6 +1,8 @@
 import random
 import unittest
 
+import pandas as pd
+
 import ga_configs
 import genetic_algorithm_results
 import protocols
@@ -116,6 +118,34 @@ class TestGeneticAlgorithmResults(unittest.TestCase):
         expected_parameter_scaling = [0.5, 1.25]
 
         self.assertListEqual(parameter_scaling, expected_parameter_scaling)
+
+    def test_calculate_fitness_score_from_contributions(self):
+        df_one = pd.DataFrame(
+            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.6, 0.4]})
+        df_two = pd.DataFrame(
+            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.2, 0.8]})
+
+        fitness_score = genetic_algorithm_results._calc_fitness_score(
+            contributions=[df_one, df_two])
+
+        expected_fitness_score = 1.4
+
+        self.assertAlmostEqual(fitness_score, expected_fitness_score)
+
+    def test_get_max_contributions(self):
+        df_one = pd.DataFrame(
+            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.6, 0.4]})
+        df_two = pd.DataFrame(
+            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.2, 0.8]})
+
+        max_contributions = genetic_algorithm_results._get_max_contributions(
+            contributions=[df_one, df_two])
+        expected_max_contributions_dict = {
+            'Percent Contribution': {'i_k1': 0.6, 'i_ks': 0.8}
+        }
+        self.assertDictEqual(
+            max_contributions.to_dict(),
+            expected_max_contributions_dict)
 
 
 if __name__ == '__main__':

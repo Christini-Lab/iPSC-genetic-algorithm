@@ -1,5 +1,4 @@
 """Contains three classes containing information about a trace."""
-from __future__ import annotations
 
 from typing import List
 
@@ -49,7 +48,7 @@ class IrregularPacingInfo:
                 return True
         return False
 
-    def plot_stimulations(self, trace: Trace) -> None:
+    def plot_stimulations(self, trace: 'Trace') -> None:
         stimulation_y_values = _find_trace_y_values(
             trace=trace,
             timings=self.stimulations)
@@ -57,7 +56,7 @@ class IrregularPacingInfo:
         sti = plt.scatter(self.stimulations, stimulation_y_values, c='red')
         plt.legend((sti,), ('Stimulation',), loc='upper right')
 
-    def plot_peaks_and_apd_ends(self, trace: Trace) -> None:
+    def plot_peaks_and_apd_ends(self, trace: 'Trace') -> None:
         peak_y_values = _find_trace_y_values(
             trace=trace,
             timings=self.peaks)
@@ -189,6 +188,20 @@ class CurrentResponseInfo:
         normalized = 2. * (current - np.min(current)) / np.ptp(current) - 1
         return normalized / 4
 
+    def get_single_current_values(self, current_name: str) -> List[float]:
+        # Find the index of the specified current.
+        for i in range(len(self.currents[0])):
+            if self.currents[0][i].name == current_name:
+                current_index = i
+                break
+        else:
+            raise ValueError('Current {} is not found.'.format(current_name))
+
+        values = []
+        for current in self.currents:
+            values.append(current[current_index].value)
+        return values
+
 
 def _find_trace_y_values(trace, timings):
     """Given a trace, finds the y values of the timings provided."""
@@ -236,8 +249,13 @@ class Trace:
             return ValueError('Trace does not have current info stored. Trace '
                               'was not generated with voltage clamp protocol.')
 
-        plt.plot(self.t, self.y, 'b--')
-        plt.plot(self.t, self.current_response_info.get_current_summed(), 'r--')
+        voltage_line, = plt.plot(self.t, self.y, 'b', label='Voltage')
+        current_line, = plt.plot(
+            self.t,
+            self.current_response_info.get_current_summed(),
+            'r--',
+            label='Current')
+        plt.legend(handles=[voltage_line, current_line])
 
     def plot_only_currents(self, color):
         if not self.current_response_info:
@@ -245,4 +263,3 @@ class Trace:
                               'was not generated with voltage clamp protocol.')
 
         plt.plot(self.t, self.current_response_info.get_current_summed(), color)
-

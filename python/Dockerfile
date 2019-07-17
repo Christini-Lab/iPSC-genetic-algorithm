@@ -1,5 +1,12 @@
-FROM python:3.7.2
-WORKDIR /app
-COPY . /app
-RUN pip install -r requirements.txt
-CMD ["python", "main.py"]
+FROM ubuntu:16.04
+
+RUN apt-get update -y && \
+    apt-get install -y python3-pip python3-dev
+
+COPY . /
+
+RUN pip3 install --upgrade pip
+RUN pip3 install -r requirements.txt
+
+
+CMD ["python3", "-u", "ga_paci_final_2/main.py"]

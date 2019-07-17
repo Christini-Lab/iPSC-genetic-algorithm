@@ -58,6 +58,9 @@ class PaciModel:
     i_kr_red_med = 1
     i_ks_red_med = 1
 
+    y_names = ['Vm', 'Ca_SR', 'Cai', 'g', 'd', 'f1', 'f2', 'fCa', 'Xr1', 'Xr2',
+               'Xs', 'h', 'j', 'm', 'Xf', 'q', 'r', 'Nai', 'm_L', 'h_L', 'RyRa',
+               'RyRo', 'RyRc']
     y_initial = [-0.0749228904740065, 0.0936532528714175, 3.79675694306440e-05,
                  0, 8.25220533963093e-05, 0.741143500777858, 0.999983958619179,
                  0.997742015033076, 0.266113517200784, 0.434907203275640,
@@ -66,6 +69,8 @@ class PaciModel:
                  0.00558005376429710, 8.64821066193476, 0.00225383437957339,
                  0.0811507312565017, 0.0387066722172937, 0.0260449185736275,
                  0.0785849084330126]
+    y_initial_zero = [-0.070, 0.32, 0.0002, 0, 0, 1, 1, 1, 0, 1, 0, 0.75, 0.75,
+                      0, 0.1, 1, 0, 9.2, 0, 0.75, 0.3, 0.9, 0.1]
 
     def __init__(self, updated_parameters=None):
         self.default_parameters = {'g_na': 3671.2302, 'g_ca_l': 8.635702e-5,
@@ -80,6 +85,7 @@ class PaciModel:
         self.y_voltage = []
         self.d_y_voltage = []
         self.current_response_info = None
+        self.full_y = []
 
     def generate_response(self, protocol):
         """Returns a trace based on the specified target objective.
@@ -95,18 +101,24 @@ class PaciModel:
         self.t = []
         self.y_voltage = []
         self.d_y_voltage = []
+        self.full_y = []
 
         if isinstance(protocol, protocols.SingleActionPotentialProtocol):
+            self.current_response_info = trace.CurrentResponseInfo()
             try:
                 integrate.solve_ivp(
                     self.generate_single_action_potential_function(),
-                    [0, protocol.AP_DURATION_SECS],
+                    [0, protocol.duration],
                     self.y_initial,
                     method='BDF',
                     max_step=1e-3)
             except ValueError:
+                print('Model could not produce trace.')
                 return None
-            return trace.Trace(self.t, self.y_voltage)
+            return trace.Trace(
+                self.t,
+                self.y_voltage,
+                current_response_info=self.current_response_info)
 
         elif isinstance(protocol, protocols.IrregularPacingProtocol):
             pacing_info = trace.IrregularPacingInfo()
@@ -185,6 +197,7 @@ class PaciModel:
     def action_potential_diff_eq(self, t, y):
         self.y_voltage.append(y[0])
         self.t.append(t)
+        self.full_y.append(y)
 
         d_y = np.empty(23)
 
