@@ -7,7 +7,19 @@ import paci_2018
 import numpy.testing as tst
 import write_voltage_data
 
+
 class TestWritingData(unittest.TestCase):
+    def setUpClass():
+        path_to_data = './data/paci_sap_baseline.csv'
+        path_to_figure = './data/paci_sap_baseline.png' 
+        try:
+            os.remove(path_to_figure)
+            os.remove(path_to_data)
+        except:
+            pass
+
+        write_voltage_data.main()
+
     def test_file_exists(self):
         path_to_output = './data/paci_sap_baseline.csv'
 
