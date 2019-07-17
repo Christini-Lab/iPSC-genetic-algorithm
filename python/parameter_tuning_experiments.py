@@ -296,12 +296,12 @@ def plot_baseline_irregular_pacing_trace():
 def plot_baseline_voltage_clamp_trace():
     model = paci_2018.PaciModel()
     steps = [
-        protocols.VoltageClampStep(duration=0.1, voltage=-0.08),
-        protocols.VoltageClampStep(duration=0.1, voltage=-0.12),
+        protocols.VoltageClampStep(duration=0.9, voltage=-0.08),
+        protocols.VoltageClampStep(duration=0.7, voltage=-0.12),
         protocols.VoltageClampStep(duration=0.5, voltage=-0.06),
-        protocols.VoltageClampStep(duration=0.05, voltage=-0.04),
-        protocols.VoltageClampStep(duration=0.15, voltage=0.02),
-        protocols.VoltageClampStep(duration=0.3, voltage=0.04),
+        protocols.VoltageClampStep(duration=0.9, voltage=-0.04),
+        protocols.VoltageClampStep(duration=0.95, voltage=0.02),
+        protocols.VoltageClampStep(duration=0.9, voltage=0.04),
     ]
     trace = model.generate_response(
         protocol=protocols.VoltageClampProtocol(steps=steps))

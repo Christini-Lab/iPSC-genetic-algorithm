@@ -249,8 +249,13 @@ class Trace:
             return ValueError('Trace does not have current info stored. Trace '
                               'was not generated with voltage clamp protocol.')
 
-        plt.plot(self.t, self.y, 'b--')
-        plt.plot(self.t, self.current_response_info.get_current_summed(), 'r--')
+        voltage_line, = plt.plot(self.t, self.y, 'b', label='Voltage')
+        current_line, = plt.plot(
+            self.t,
+            self.current_response_info.get_current_summed(),
+            'r--',
+            label='Current')
+        plt.legend(handles=[voltage_line, current_line])
 
     def plot_only_currents(self, color):
         if not self.current_response_info:
@@ -258,4 +263,3 @@ class Trace:
                               'was not generated with voltage clamp protocol.')
 
         plt.plot(self.t, self.current_response_info.get_current_summed(), color)
-

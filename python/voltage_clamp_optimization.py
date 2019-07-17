@@ -19,7 +19,6 @@ class VCOGeneticAlgorithm:
         self.config = config
 
     def run(self):
-        print('Running GA.')
         population = self._init_population()
 
         ga_result = genetic_algorithm_results.GAResultVoltageClampOptimization(
@@ -61,22 +60,7 @@ class VCOGeneticAlgorithm:
         Fitness is determined by how well the voltage clamp protocol isolates
         individual ionic currents.
         """
-        trace = paci_2018.PaciModel().generate_response(
-            protocol=individual.protocol)
-        if not trace:
-            return 0
-
-        contributions = []
-        i = 0
-        while i + self.config.contribution_step < len(trace.t):
-            contributions.append(
-                trace.current_response_info.calculate_current_contribution(
-                    timings=trace.t,
-                    start_t=trace.t[i],
-                    end_t=trace.t[i + self.config.contribution_step],
-                    target_currents=self.config.target_currents))
-            i += self.config.contribution_step
-        return _calc_fitness_score(contributions=contributions)
+        return individual.evaluate(config=self.config)
 
     def _mate(
             self,
@@ -134,17 +118,6 @@ class VCOGeneticAlgorithm:
         return [
             self._init_individual() for _ in range(self.config.population_size)
         ]
-
-
-def _calc_fitness_score(contributions: List[pd.DataFrame]) -> int:
-    """Calculates the fitness score based on contribution time steps.
-
-    Sums the max contributions for each parameter.
-    """
-    combined_current_contributions = pd.concat(contributions)
-    max_contributions = combined_current_contributions.groupby(
-        ['Parameter']).max()
-    return max_contributions['Percent Contribution'].sum()
 
 
 def generate_statistics(population):

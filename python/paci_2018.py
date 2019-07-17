@@ -109,8 +109,7 @@ class PaciModel:
                 integrate.solve_ivp(
                     self.generate_single_action_potential_function(),
                     [0, protocol.duration],
-                    # TODO CHANGED Y INITIAL TO 0
-                    self.y_initial_zero,
+                    self.y_initial,
                     method='BDF',
                     max_step=1e-3)
             except ValueError:

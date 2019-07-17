@@ -138,19 +138,6 @@ class VoltageClampOptimizationTest(unittest.TestCase):
                 protocol=protocol))
         self.assertGreater(error, 0)
 
-    def test_calculate_fitness_score_from_contributions(self):
-        df_one = pd.DataFrame(
-            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.6, 0.4]})
-        df_two = pd.DataFrame(
-            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.2, 0.8]})
-
-        fitness_score = voltage_clamp_optimization._calc_fitness_score(
-            contributions=[df_one, df_two])
-
-        expected_fitness_score = 1.4
-
-        self.assertAlmostEqual(fitness_score, expected_fitness_score)
-
     def test_init_parameters(self):
         individuals = [self.vc_ga._init_individual() for _ in range(10)]
 

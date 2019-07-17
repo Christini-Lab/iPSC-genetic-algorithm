@@ -9,14 +9,16 @@ import math
 import random
 from typing import List
 
-import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
+import numpy as np
+import pandas as pd
 import seaborn as sns
 
 import ga_configs
 import paci_2018
 import protocols
+import trace
 
 
 class ExtremeType(enum.Enum):
@@ -124,35 +126,6 @@ class GeneticAlgorithmResult(ABC):
                     self.get_individual(generation=i, index=j).fitness)
         plt.scatter(x_data, y_data, alpha=0.3, color='red')
 
-    def graph_error_over_generation(self, with_scatter=False):
-        """Graphs the change in error over generations."""
-        mean_errors = []
-        best_individual_errors = []
-
-        for i in range(len(self.generations)):
-            best_individual_errors.append(
-                self.get_high_fitness_individual(i).fitness)
-            mean_errors.append(
-                np.mean([j.fitness for j in self.generations[i]]))
-
-        plt.figure()
-        if with_scatter:
-            self.plot_error_scatter()
-        mean_error_line, = plt.plot(
-            range(len(self.generations)),
-            mean_errors,
-            label='Mean Error')
-        best_individual_error_line, = plt.plot(
-            range(len(self.generations)),
-            best_individual_errors,
-            label='Best Individual')
-        plt.xticks(range(len(self.generations)))
-        hfont = {'fontname': 'Helvetica'}
-        plt.xlabel('Generation', **hfont)
-        plt.ylabel('Individual', **hfont)
-        plt.legend(handles=[mean_error_line, best_individual_error_line])
-        plt.savefig('figures/error_over_generation.png')
-
 
 class GAResultParameterTuning(GeneticAlgorithmResult):
     """Contains information about a run of a parameter tuning genetic algorithm.
@@ -230,6 +203,35 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
         plt.yticks(parameter_indices, parameter_indices)
         plt.xticks([i for i in range(4)], [i for i in range(4)])
 
+    def graph_error_over_generation(self, with_scatter=False):
+        """Graphs the change in error over generations."""
+        mean_errors = []
+        best_individual_errors = []
+
+        for i in range(len(self.generations)):
+            best_individual_errors.append(
+                self.get_high_fitness_individual(i).fitness)
+            mean_errors.append(
+                np.mean([j.fitness for j in self.generations[i]]))
+
+        plt.figure()
+        if with_scatter:
+            self.plot_error_scatter()
+        mean_error_line, = plt.plot(
+            range(len(self.generations)),
+            mean_errors,
+            label='Mean Error')
+        best_individual_error_line, = plt.plot(
+            range(len(self.generations)),
+            best_individual_errors,
+            label='Best Individual')
+        plt.xticks(range(len(self.generations)))
+        hfont = {'fontname': 'Helvetica'}
+        plt.xlabel('Generation', **hfont)
+        plt.ylabel('Individual', **hfont)
+        plt.legend(handles=[mean_error_line, best_individual_error_line])
+        plt.savefig('figures/error_over_generation.png')
+
 
 class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
     """Contains information about a run of a parameter tuning genetic algorithm.
@@ -268,12 +270,50 @@ class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
         ax.collections[0].colorbar.set_label('Fitness')
         plt.savefig('figures/heatmap.png')
 
+    def graph_fitness_over_generation(self, with_scatter=False):
+        """Graphs the change in error over generations."""
+        mean_fitnesses = []
+        best_individual_fitnesses = []
 
-def graph_vc_individual(individual: 'VCOptimizationIndividual') -> None:
+        for i in range(len(self.generations)):
+            best_individual_fitnesses.append(
+                self.get_high_fitness_individual(i).fitness)
+            mean_fitnesses.append(
+                np.mean([j.fitness for j in self.generations[i]]))
+
+        plt.figure()
+        if with_scatter:
+            self.plot_error_scatter()
+        mean_fitness_line, = plt.plot(
+            range(len(self.generations)),
+            mean_fitnesses,
+            label='Mean Fitness')
+        best_individual_fitness_line, = plt.plot(
+            range(len(self.generations)),
+            best_individual_fitnesses,
+            label='Best Individual Fitness')
+        plt.xticks(range(len(self.generations)))
+        hfont = {'fontname': 'Helvetica'}
+        plt.xlabel('Generation', **hfont)
+        plt.ylabel('Individual', **hfont)
+        plt.legend(handles=[mean_fitness_line, best_individual_fitness_line])
+        plt.savefig('figures/fitness_over_generation.png')
+
+    def graph_current_contributions(self,
+                                    individual: 'VCOptimizationIndividual'):
+        """Graphs the max current contributions at any time for all currents."""
+        pass
+
+
+def graph_vc_individual(individual: 'VCOptimizationIndividual',
+                        title: str) -> None:
     plt.figure()
-    trace = paci_2018.generate_trace(protocol=individual.protocol)
-    trace.plot_with_currents()
-    plt.savefig('figures/vc_clamp_recent_individual.png')
+    i_trace = paci_2018.generate_trace(protocol=individual.protocol)
+    if i_trace:
+        i_trace.plot_with_currents()
+        plt.savefig('figures/{}.png'.format(title))
+    else:
+        print('Could not generate individual trace.')
 
 
 class Individual:
@@ -339,3 +379,47 @@ class VCOptimizationIndividual(Individual):
                     self.fitness == other.fitness)
         else:
             return False
+
+    def evaluate(self, config: ga_configs.VoltageOptimizationConfig) -> int:
+        """Evaluates the fitness of the individual."""
+        i_trace = paci_2018.PaciModel().generate_response(
+            protocol=self.protocol)
+        if not i_trace:
+            return 0
+
+        return _calc_fitness_score(
+            contributions=get_contributions(i_trace=i_trace, config=config))
+
+
+def get_contributions(
+        i_trace: trace.Trace,
+        config: ga_configs.VoltageOptimizationConfig) -> List[pd.DataFrame]:
+    """Gets current contributions over windows of time."""
+    contributions = []
+    i = 0
+    while i + config.contribution_step < len(i_trace.t):
+        contributions.append(
+            i_trace.current_response_info.calculate_current_contribution(
+                timings=i_trace.t,
+                start_t=i_trace.t[i],
+                end_t=i_trace.t[i + config.contribution_step],
+                target_currents=config.target_currents))
+        i += config.contribution_step
+    return contributions
+
+
+def _get_max_contributions(contributions: List[pd.DataFrame]) -> pd.DataFrame:
+    """Gets the max contributions for each current."""
+    combined_current_contributions = pd.concat(contributions)
+    max_contributions = combined_current_contributions.groupby(
+        ['Parameter']).max()
+    return max_contributions
+
+
+def _calc_fitness_score(contributions: List[pd.DataFrame]) -> int:
+    """Calculates the fitness score based on contribution time steps.
+
+    Sums the max contributions for each parameter.
+    """
+    return _get_max_contributions(
+        contributions=contributions)['Percent Contribution'].sum()
