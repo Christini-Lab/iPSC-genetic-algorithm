@@ -68,12 +68,12 @@ IP_CONFIG = ga_configs.ParameterTuningConfig(
 
 VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     contribution_step=100,
-    steps_in_protocol=6,
+    steps_in_protocol=8,
     step_duration_bounds=(0.05, 0.6),
     step_voltage_bounds=(-.12, .06),
-    target_currents=None,  # Setting nones isolates all currents.
-    population_size=3,
-    max_generations=3,
+    target_currents=None,  # Setting None isolates all currents.
+    population_size=2,
+    max_generations=2,
     mate_probability=0.9,
     mutate_probability=0.9,
     gene_swap_probability=0.2,

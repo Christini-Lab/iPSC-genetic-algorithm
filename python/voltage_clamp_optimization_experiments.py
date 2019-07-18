@@ -1,12 +1,22 @@
 """Contains functions to run VC optimization genetic algorithm experiments."""
 
-from matplotlib import pyplot as plt
-
 import ga_configs
 import genetic_algorithm_results
-import paci_2018
-import protocols
 import voltage_clamp_optimization
+
+
+def get_highest_fitness_individual_overall(
+        result: genetic_algorithm_results.GAResultVoltageClampOptimization
+) -> genetic_algorithm_results.VCOptimizationIndividual:
+    """Gets the highest fitness individual across all generations."""
+    highest_fitness = 0
+    highest_fitness_individual = None
+    for i in range(len(result.generations)):
+        curr_individual = result.get_high_fitness_individual(generation=i)
+        if curr_individual.fitness > highest_fitness:
+            highest_fitness = curr_individual.fitness
+            highest_fitness_individual = curr_individual
+    return highest_fitness_individual
 
 
 def run_voltage_clamp_experiment(
@@ -25,6 +35,18 @@ def run_voltage_clamp_experiment(
             generation=config.max_generations // 2)
         best_end = result.get_high_fitness_individual(
             generation=config.max_generations - 1)
+        best_all_around = get_highest_fitness_individual_overall(result=result)
+        print('Best protocol: {}'.format(best_all_around.protocol))
+        print('Best protocol\'s fitness: {}'.format(best_all_around.fitness))
+
+        result.graph_current_contributions(
+            individual=best_end,
+            title='Best individual currents, generation {}'.format(
+                config.max_generations - 1))
+
+        result.graph_current_contributions(
+            individual=best_all_around,
+            title='Best individual, all generations')
 
         genetic_algorithm_results.graph_vc_individual(
             individual=random_0,
@@ -47,3 +69,7 @@ def run_voltage_clamp_experiment(
             individual=best_end,
             title='Best individual, generation {}'.format(
                 config.max_generations - 1))
+
+        genetic_algorithm_results.graph_vc_individual(
+            individual=best_all_around,
+            title='Best individual, all generations')

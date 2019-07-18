@@ -160,8 +160,8 @@ class CurrentResponseInfo:
 
         df = pd.DataFrame(
             data={'Parameter': parameter_names,
-                  'Percent Contribution': percent_contributions})
-        df['Percent Contribution'] = pd.to_numeric(df['Percent Contribution'])
+                  'Max Percent Contribution': percent_contributions})
+        df['Max Percent Contribution'] = pd.to_numeric(df['Max Percent Contribution'])
         return df
 
     def plot_current_contributions(self):
@@ -172,7 +172,7 @@ class CurrentResponseInfo:
         contributions = [self.calculate_current_contribution(*i)
                          for i in time_intervals]
         for i in contributions:
-            i.plot.bar(x='Parameter', y='Percent Contribution')
+            i.plot.bar(x='Parameter', y='Max Percent Contribution')
             plt.show()
 
     def get_current_summed(self):

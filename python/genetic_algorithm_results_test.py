@@ -121,9 +121,9 @@ class TestGeneticAlgorithmResults(unittest.TestCase):
 
     def test_calculate_fitness_score_from_contributions(self):
         df_one = pd.DataFrame(
-            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.6, 0.4]})
+            {'Parameter': ['i_k1', 'i_ks'], 'Max Percent Contribution': [0.6, 0.4]})
         df_two = pd.DataFrame(
-            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.2, 0.8]})
+            {'Parameter': ['i_k1', 'i_ks'], 'Max Percent Contribution': [0.2, 0.8]})
 
         fitness_score = genetic_algorithm_results._calc_fitness_score(
             contributions=[df_one, df_two])
@@ -134,14 +134,14 @@ class TestGeneticAlgorithmResults(unittest.TestCase):
 
     def test_get_max_contributions(self):
         df_one = pd.DataFrame(
-            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.6, 0.4]})
+            {'Parameter': ['i_k1', 'i_ks'], 'Max Percent Contribution': [0.6, 0.4]})
         df_two = pd.DataFrame(
-            {'Parameter': ['i_k1', 'i_ks'], 'Percent Contribution': [0.2, 0.8]})
+            {'Parameter': ['i_k1', 'i_ks'], 'Max Percent Contribution': [0.2, 0.8]})
 
         max_contributions = genetic_algorithm_results._get_max_contributions(
             contributions=[df_one, df_two])
         expected_max_contributions_dict = {
-            'Percent Contribution': {'i_k1': 0.6, 'i_ks': 0.8}
+            'Max Percent Contribution': {'i_k1': 0.6, 'i_ks': 0.8}
         }
         self.assertDictEqual(
             max_contributions.to_dict(),

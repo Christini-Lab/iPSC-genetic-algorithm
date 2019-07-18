@@ -153,7 +153,7 @@ class TraceTest(unittest.TestCase):
 
         expected_curr_contrib = pd.DataFrame(
             data={'Parameter': ['i_na', 'i_ca'],
-                  'Percent Contribution': [0.7, 0.3]}
+                  'Max Percent Contribution': [0.7, 0.3]}
         )
 
         pd.testing.assert_frame_equal(curr_contrib, expected_curr_contrib)

@@ -300,13 +300,22 @@ class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
         plt.savefig('figures/fitness_over_generation.png')
 
     def graph_current_contributions(self,
-                                    individual: 'VCOptimizationIndividual'):
+                                    individual: 'VCOptimizationIndividual',
+                                    title: str) -> None:
         """Graphs the max current contributions at any time for all currents."""
-        pass
+        i_trace = paci_2018.generate_trace(protocol=individual.protocol)
+        if not i_trace:
+            raise ValueError('Individual could not produce a valid trace.')
+
+        max_contributions = _get_max_contributions(
+            get_contributions(i_trace=i_trace, config=self.config))
+        max_contributions.plot.bar()
+        plt.savefig('figures/{}.png'.format(title))
 
 
 def graph_vc_individual(individual: 'VCOptimizationIndividual',
                         title: str) -> None:
+    """Graphs a voltage clamp optimization individual."""
     plt.figure()
     i_trace = paci_2018.generate_trace(protocol=individual.protocol)
     if i_trace:
@@ -422,4 +431,4 @@ def _calc_fitness_score(contributions: List[pd.DataFrame]) -> int:
     Sums the max contributions for each parameter.
     """
     return _get_max_contributions(
-        contributions=contributions)['Percent Contribution'].sum()
+        contributions=contributions)['Max Percent Contribution'].sum()
