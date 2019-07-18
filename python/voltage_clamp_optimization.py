@@ -5,7 +5,6 @@ import random
 from typing import List
 
 import numpy as np
-import pandas as pd
 
 import ga_configs
 import genetic_algorithm_results
@@ -31,7 +30,6 @@ class VCOGeneticAlgorithm:
 
         for generation in range(1, self.config.max_generations):
             print('Generation {}'.format(generation))
-
             population = self._select(population=population)
 
             for i_one, i_two in zip(population[::2], population[1::2]):
@@ -82,10 +80,28 @@ class VCOGeneticAlgorithm:
         """Mutates an individual by choosing a number for norm. distribution."""
         for i in range(len(individual.protocol.steps)):
             if random.random() < self.config.gene_mutation_probability:
-                individual.protocol.steps[i].voltage = np.random.normal(
+                # If np.random.normal exceeds the bounds set in config, then
+                # set them to the bounds.
+                v_bounds = self.config.step_voltage_bounds
+                d_bounds = self.config.step_duration_bounds
+
+                new_voltage = np.random.normal(
                     individual.protocol.steps[i].voltage)
-                individual.protocol.steps[i].duration = np.random.normal(
+                if new_voltage > v_bounds[1]:
+                    individual.protocol.steps[i].voltage = v_bounds[1]
+                elif new_voltage < v_bounds[0]:
+                    individual.protocol.steps[i].voltage = v_bounds[0]
+                else:
+                    individual.protocol.steps[i].voltage = new_voltage
+
+                new_duration = np.random.normal(
                     individual.protocol.steps[i].duration)
+                if new_duration > d_bounds[1]:
+                    individual.protocol.steps[i].duration = d_bounds[1]
+                elif new_duration < d_bounds[0]:
+                    individual.protocol.steps[i].duration = d_bounds[0]
+                else:
+                    individual.protocol.steps[i].duration = new_duration
 
     def _select(
             self,

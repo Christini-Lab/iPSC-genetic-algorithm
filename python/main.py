@@ -2,6 +2,8 @@
 
 Use functions in parameter_tuning_experiments.py to run GAs."""
 
+import time
+
 import parameter_tuning_experiments
 import protocols
 import ga_configs
@@ -82,9 +84,13 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
 
 
 def main():
+    start_time = time.time()
     voltage_clamp_optimization_experiments.run_voltage_clamp_experiment(
         config=VCO_CONFIG,
         full_output=True)
+
+    elapsed_time = time.time() - start_time
+    print('Runtime: {}'.format(elapsed_time))
 
 
 if __name__ == '__main__':

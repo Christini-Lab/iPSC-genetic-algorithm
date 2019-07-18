@@ -81,11 +81,7 @@ class VoltageClampOptimizationTest(unittest.TestCase):
             ]
         )
 
-        # With random seed set to 3, first value of random.random() is 0.237,
-        # and second value is 0.544. Therefore we should expect only the second
-        # step to mutate with GENE_SWAP_PROBABILITY set to 0.5. With np.random
-        # seed set, the voltage will be mutated to 3.7886 and the duration to
-        # 1.1865.
+        # Finds seed so that only second step is mutated.
         for i in range(500):
             random.seed(i)
             num_one = random.random()
@@ -96,7 +92,6 @@ class VoltageClampOptimizationTest(unittest.TestCase):
         else:
             self.fail(msg='Could not find seed to meet required behavior.')
 
-        # TODO Fix random seed.
         np.random.seed(3)
         self.vc_ga._mutate(
             individual=genetic_algorithm_results.VCOptimizationIndividual(
@@ -104,11 +99,30 @@ class VoltageClampOptimizationTest(unittest.TestCase):
         expected_protocol = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=1.0, duration=0.5),
-                protocols.VoltageClampStep(voltage=3.7886, duration=1.1865),
+                protocols.VoltageClampStep(voltage=0.6, duration=1.1865),
             ]
         )
 
         self.assertEqual(protocol, expected_protocol)
+
+    def test_mutate_steps_falls_between_bounds(self):
+        protocol = protocols.VoltageClampProtocol(
+            steps=[
+                protocols.VoltageClampStep(voltage=-1.0, duration=0.5),
+                protocols.VoltageClampStep(voltage=0.4, duration=0.75),
+            ]
+        )
+        individual = genetic_algorithm_results.VCOptimizationIndividual(
+            protocol=protocol)
+        for _ in range(500):
+            self.vc_ga._mutate(individual=individual)
+            for i in individual.protocol.steps:
+                self.assertTrue(
+                   self.vc_ga.config.step_duration_bounds[0] <= i.duration
+                   <= self.vc_ga.config.step_duration_bounds[1])
+                self.assertTrue(
+                    self.vc_ga.config.step_voltage_bounds[0] <= i.voltage
+                    <= self.vc_ga.config.step_voltage_bounds[1])
 
     def test_evaluate_returns_zero_error(self):
         protocol = protocols.VoltageClampProtocol(
