@@ -81,8 +81,10 @@ class VoltageClampStep:
 class VoltageClampProtocol:
     """Encapsulates state and behavior of a voltage clamp protocol."""
 
+    HOLDING_STEP = VoltageClampStep(voltage=-0.08, duration=1)
+
     def __init__(self, steps: List[VoltageClampStep]) -> None:
-        self.steps = steps
+        self.steps = [self.HOLDING_STEP] + steps
         self.voltage_change_endpoints = self.init_voltage_change_endpoints()
 
     def __eq__(self, other):
