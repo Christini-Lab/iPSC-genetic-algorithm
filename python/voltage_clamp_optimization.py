@@ -85,23 +85,25 @@ class VCOGeneticAlgorithm:
                 v_bounds = self.config.step_voltage_bounds
                 d_bounds = self.config.step_duration_bounds
 
-                new_voltage = np.random.normal(
-                    individual.protocol.steps[i].voltage)
-                if new_voltage > v_bounds[1]:
+                # Standard deviation of normal distribution is set to the range
+                # of possible values / 3.
+                new_voltage_offset = np.random.normal(
+                    loc=0,
+                    scale=abs(v_bounds[0] - v_bounds[1]) / 3)
+                individual.protocol.steps[i].voltage += new_voltage_offset
+                if individual.protocol.steps[i].voltage > v_bounds[1]:
                     individual.protocol.steps[i].voltage = v_bounds[1]
-                elif new_voltage < v_bounds[0]:
+                elif individual.protocol.steps[i].voltage < v_bounds[0]:
                     individual.protocol.steps[i].voltage = v_bounds[0]
-                else:
-                    individual.protocol.steps[i].voltage = new_voltage
 
-                new_duration = np.random.normal(
-                    individual.protocol.steps[i].duration)
-                if new_duration > d_bounds[1]:
+                new_duration_offset = np.random.normal(
+                    loc=0,
+                    scale=abs(d_bounds[0] - d_bounds[1]) / 3)
+                individual.protocol.steps[i].duration += new_duration_offset
+                if individual.protocol.steps[i].duration > d_bounds[1]:
                     individual.protocol.steps[i].duration = d_bounds[1]
-                elif new_duration < d_bounds[0]:
+                elif individual.protocol.steps[i].duration < d_bounds[0]:
                     individual.protocol.steps[i].duration = d_bounds[0]
-                else:
-                    individual.protocol.steps[i].duration = new_duration
 
     def _select(
             self,

@@ -46,7 +46,7 @@ def run_voltage_clamp_experiment(
 
         result.graph_current_contributions(
             individual=best_all_around,
-            title='Best individual, all generations')
+            title='Best individual currents, all generations')
 
         genetic_algorithm_results.graph_vc_individual(
             individual=random_0,

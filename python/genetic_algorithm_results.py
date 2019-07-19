@@ -322,7 +322,8 @@ def graph_vc_individual(individual: 'VCOptimizationIndividual',
         i_trace.plot_with_currents()
         plt.savefig('figures/{}.png'.format(title))
     else:
-        print('Could not generate individual trace.')
+        print('Could not generate individual trace for individual: {}.'.format(
+            individual.protocol))
 
 
 class Individual:

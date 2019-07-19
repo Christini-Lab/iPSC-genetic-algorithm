@@ -266,7 +266,7 @@ def run_param_tuning_experiment(
 
 def plot_baseline_single_action_potential_trace():
     trace = paci_2018.generate_trace(
-        protocol=protocols.SingleActionPotentialProtocol(duration=30))
+        protocol=protocols.SingleActionPotentialProtocol(duration=5))
     trace.plot()
     plt.savefig('figures/baseline_single_action_potential_trace.png')
 
@@ -279,7 +279,8 @@ def plot_all_in_system_of_equations(duration=10):
     for i in range(len(model.y_names)):
         plt.figure()
         plt.plot([timestamp[i] for timestamp in model.full_y])
-        plt.savefig('figures/{}.png'.format(model.y_names[i]))
+        plt.savefig('figures/before_hold_i_na_480/{}.png'.format(
+            model.y_names[i]))
 
 
 def plot_baseline_irregular_pacing_trace():

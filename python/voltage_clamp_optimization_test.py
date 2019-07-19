@@ -99,7 +99,9 @@ class VoltageClampOptimizationTest(unittest.TestCase):
         expected_protocol = protocols.VoltageClampProtocol(
             steps=[
                 protocols.VoltageClampStep(voltage=1.0, duration=0.5),
-                protocols.VoltageClampStep(voltage=0.6, duration=1.1865),
+                protocols.VoltageClampStep(
+                    voltage=0.6,
+                    duration=1.0264562386575933),
             ]
         )
 
@@ -114,7 +116,7 @@ class VoltageClampOptimizationTest(unittest.TestCase):
         )
         individual = genetic_algorithm_results.VCOptimizationIndividual(
             protocol=protocol)
-        for _ in range(500):
+        for _ in range(5000):
             self.vc_ga._mutate(individual=individual)
             for i in individual.protocol.steps:
                 self.assertTrue(

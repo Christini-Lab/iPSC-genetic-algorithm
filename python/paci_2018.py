@@ -547,9 +547,12 @@ class PaciModel:
 
         # Ionic concentrations
         # Nai
+        # TODO Nai is now held constant. Model was run for 960 second and the
+        # TODO the value of Nai was around 8.6 at start
         d_y[17] = -self.cm_farad * (
                 i_na + i_na_l + i_b_na + 3.0 * i_na_k + 3.0 * i_na_ca + i_f_na
         ) / (self.f_coulomb_per_mole * self.vc_micrometer_cube * 1.0e-18)
+
         # caSR
         d_y[2] = cai_bufc * (i_leak - i_up + i_rel - (
                 i_ca_l + i_b_ca + i_p_ca - 2.0 * i_na_ca) * self.cm_farad / (
