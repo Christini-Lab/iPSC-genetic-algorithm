@@ -69,7 +69,7 @@ class VoltageClampStep:
         return 'Voltage: {}, Duration: {}'.format(self.voltage, self.duration)
 
     def __repr__(self):
-        return self.__str()
+        return self.__str__()
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -83,9 +83,12 @@ class VoltageClampProtocol:
 
     HOLDING_STEP = VoltageClampStep(voltage=-0.08, duration=1)
 
-    def __init__(self, steps: List[VoltageClampStep]) -> None:
-        self.steps = [self.HOLDING_STEP] + steps
-        self.voltage_change_endpoints = self.init_voltage_change_endpoints()
+    def __init__(self, steps: List[VoltageClampStep]=None) -> None:
+        if steps:
+            self.steps = [self.HOLDING_STEP] + steps
+            self.voltage_change_endpoints = self.init_voltage_change_endpoints()
+        else:
+            self.steps = []
 
     def __eq__(self, other):
 
@@ -136,6 +139,8 @@ class VoltageClampProtocol:
         """Retrieves the time interval when a particular voltage was active."""
         # Todo how should this handle the case when there are more than
         # Todo one voltages in the protocol?
+        # TODO THIS IS A BUG. UNEXPECTED BEHAVIOR WHEN TWO STEPS HAVE SAME
+        # TODO VOLTAGE
         for i in range(len(self.steps)):
             if self.steps[i].voltage == voltage:
                 index = i

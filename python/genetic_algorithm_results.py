@@ -390,6 +390,9 @@ class VCOptimizationIndividual(Individual):
         else:
             return False
 
+    def __lt__(self, other):
+        return self.fitness < other.fitness
+
     def evaluate(self, config: ga_configs.VoltageOptimizationConfig) -> int:
         """Evaluates the fitness of the individual."""
         i_trace = paci_2018.PaciModel().generate_response(

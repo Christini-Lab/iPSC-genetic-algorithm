@@ -23,12 +23,12 @@ class VCOGeneticAlgorithm:
             config=self.config)
         ga_result.generations.append(population)
 
-        print('Evaluating initial population.')
+        print('\tEvaluating initial population.')
         for individual in population:
             individual.fitness = self._evaluate(individual=individual)
 
         for generation in range(1, self.config.max_generations):
-            print('Generation {}'.format(generation))
+            print('\tGeneration {}'.format(generation))
             population = self._select(population=population)
 
             for i_one, i_two in zip(population[::2], population[1::2]):
@@ -147,8 +147,8 @@ class VCOGeneticAlgorithm:
 
 def generate_statistics(population):
     fitness_values = [i.fitness for i in population]
-    print('  Min fitness: {}'.format(min(fitness_values)))
-    print('  Max fitness: {}'.format(max(fitness_values)))
-    print('  Average fitness: {}'.format(np.mean(fitness_values)))
-    print('  Standard deviation: {}'.format(np.std(fitness_values)))
+    print('\t\tMin fitness: {}'.format(min(fitness_values)))
+    print('\t\tMax fitness: {}'.format(max(fitness_values)))
+    print('\t\tAverage fitness: {}'.format(np.mean(fitness_values)))
+    print('\t\tStandard deviation: {}'.format(np.std(fitness_values)))
 
