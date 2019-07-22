@@ -21,7 +21,9 @@ def get_highest_fitness_individual_overall(
 
 def run_voltage_clamp_experiment(
         config: ga_configs.VoltageOptimizationConfig,
-        full_output: bool=False) -> None:
+        full_output: bool=False
+) -> genetic_algorithm_results.GAResultVoltageClampOptimization:
+    """Runs a voltage clamp experiment with output if specified."""
     result = voltage_clamp_optimization.VCOGeneticAlgorithm(config=config).run()
 
     if full_output:
@@ -73,3 +75,4 @@ def run_voltage_clamp_experiment(
         genetic_algorithm_results.graph_vc_individual(
             individual=best_all_around,
             title='Best individual, all generations')
+    return result

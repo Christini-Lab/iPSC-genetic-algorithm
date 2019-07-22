@@ -2,8 +2,8 @@ import unittest
 import paci_2018
 import protocols
 import numpy.testing as tst
-import numpy as np
 import ga_configs
+
 
 class TestPaci2018(unittest.TestCase):
     def test_generate_trace_SAP(self):

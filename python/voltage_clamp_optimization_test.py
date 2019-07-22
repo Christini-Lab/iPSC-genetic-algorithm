@@ -2,7 +2,6 @@ import random
 import unittest
 
 import numpy as np
-import pandas as pd
 
 import ga_configs
 import genetic_algorithm_results
@@ -144,15 +143,15 @@ class VoltageClampOptimizationTest(unittest.TestCase):
     def test_evaluate_returns_normal(self):
         protocol = protocols.VoltageClampProtocol(
             steps=[
-                protocols.VoltageClampStep(voltage=0.2, duration=0.1),
-                protocols.VoltageClampStep(voltage=-0.3, duration=0.1865),
+                protocols.VoltageClampStep(voltage=0.02, duration=0.1),
+                protocols.VoltageClampStep(voltage=-0.03, duration=0.1865),
             ]
         )
 
-        error = self.vc_ga._evaluate(
+        fitness = self.vc_ga._evaluate(
             individual=genetic_algorithm_results.VCOptimizationIndividual(
                 protocol=protocol))
-        self.assertGreater(error, 0)
+        self.assertGreater(fitness, 0)
 
     def test_init_parameters(self):
         individuals = [self.vc_ga._init_individual() for _ in range(10)]

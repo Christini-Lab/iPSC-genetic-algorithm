@@ -8,7 +8,6 @@ import numpy as np
 
 import ga_configs
 import genetic_algorithm_results
-import paci_2018
 import protocols
 
 
@@ -69,6 +68,10 @@ class VCOGeneticAlgorithm:
             raise ValueError('Individuals do not have the same num of steps.')
 
         for i in range(len(i_one.protocol.steps)):
+            # Do not mutate first step, which is the holding step.
+            if i == 0:
+                continue
+
             if random.random() < self.config.gene_swap_probability:
                 i_one.protocol.steps[i], i_two.protocol.steps[i] = (
                     i_two.protocol.steps[i], i_one.protocol.steps[i])
@@ -79,6 +82,10 @@ class VCOGeneticAlgorithm:
     ) -> None:
         """Mutates an individual by choosing a number for norm. distribution."""
         for i in range(len(individual.protocol.steps)):
+            # Do not mutate first step, which is the holding step.
+            if i == 0:
+                continue
+
             if random.random() < self.config.gene_mutation_probability:
                 # If np.random.normal exceeds the bounds set in config, then
                 # set them to the bounds.
