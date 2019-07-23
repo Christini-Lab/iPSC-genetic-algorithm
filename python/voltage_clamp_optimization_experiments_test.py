@@ -75,7 +75,7 @@ class TestVoltageClampOptimizationExperiments(unittest.TestCase):
             gene_swap_probability=0.2,
             gene_mutation_probability=0.2,
             tournament_size=2)
-        vc_optimization_config = ga_configs.VCProtocolOptimizationConfig(
+        vc_optimization_config = ga_configs.CombinedVCConfig(
             currents=['i_na', 'i_k1', 'i_kr'],
             step_range=range(5, 6, 1),
             adequate_fitness_threshold=0.4,
@@ -110,7 +110,7 @@ class TestVoltageClampOptimizationExperiments(unittest.TestCase):
             gene_swap_probability=0.2,
             gene_mutation_probability=0.2,
             tournament_size=2)
-        vc_optimization_config = ga_configs.VCProtocolOptimizationConfig(
+        vc_optimization_config = ga_configs.CombinedVCConfig(
             currents=['i_na'],
             step_range=range(5, 6, 1),
             adequate_fitness_threshold=0.4,
@@ -138,7 +138,7 @@ class TestVoltageClampOptimizationExperiments(unittest.TestCase):
             gene_swap_probability=0.2,
             gene_mutation_probability=0.2,
             tournament_size=2)
-        vc_optimization_config = ga_configs.VCProtocolOptimizationConfig(
+        vc_optimization_config = ga_configs.CombinedVCConfig(
             currents=['i_k1'],
             step_range=range(5, 8, 1),
             adequate_fitness_threshold=0.99,  # Very high threshold.

@@ -68,7 +68,7 @@ class GeneticAlgorithmResult(ABC):
 
     def _get_individual_at_extreme(self,
                                    generation: int,
-                                   extreme_type: ExtremeType):
+                                   extreme_type: ExtremeType) -> 'Individual':
         """Retrieves either the best or worst individual given a generation."""
         top_error_individual = self.get_individual(generation, 0)
         for i in range(len(self.generations[generation])):
@@ -299,31 +299,18 @@ class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
         plt.legend(handles=[mean_fitness_line, best_individual_fitness_line])
         plt.savefig('figures/fitness_over_generation.png')
 
-    def graph_current_contributions(self,
-                                    individual: 'VCOptimizationIndividual',
-                                    title: str) -> None:
-        """Graphs the max current contributions at any time for all currents."""
-        i_trace = paci_2018.generate_trace(protocol=individual.protocol)
-        if not i_trace:
-            raise ValueError('Individual could not produce a valid trace.')
 
-        max_contributions = _get_max_contributions(
-            get_contributions(i_trace=i_trace, config=self.config))
-        max_contributions.plot.bar()
-        plt.savefig('figures/{}.png'.format(title))
-
-
-def graph_vc_individual(individual: 'VCOptimizationIndividual',
-                        title: str) -> None:
+def graph_vc_protocol(protocol: protocols.VoltageClampProtocol,
+                      title: str) -> None:
     """Graphs a voltage clamp optimization individual."""
     plt.figure()
-    i_trace = paci_2018.generate_trace(protocol=individual.protocol)
+    i_trace = paci_2018.generate_trace(protocol=protocol)
     if i_trace:
         i_trace.plot_with_currents()
         plt.savefig('figures/{}.png'.format(title))
     else:
         print('Could not generate individual trace for individual: {}.'.format(
-            individual.protocol))
+            protocol))
 
 
 class Individual:
@@ -402,6 +389,22 @@ class VCOptimizationIndividual(Individual):
 
         return _calc_fitness_score(
             contributions=get_contributions(i_trace=i_trace, config=config))
+
+
+def graph_current_contributions(protocol: protocols.VoltageClampProtocol,
+                                config: ga_configs.VoltageOptimizationConfig,
+                                title: str) -> None:
+    """Graphs the max current contributions at any time for all currents."""
+    i_trace = paci_2018.generate_trace(protocol=protocol)
+    if not i_trace:
+        raise ValueError('Individual could not produce a valid trace.')
+
+    max_contributions = _get_max_contributions(
+        get_contributions(i_trace=i_trace, config=config))
+
+    ax = max_contributions.plot.bar()
+    ax.set_ylim(0, 1.0)
+    plt.savefig('figures/{}.png'.format(title))
 
 
 def get_contributions(

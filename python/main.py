@@ -7,6 +7,7 @@ import time
 import parameter_tuning_experiments
 import protocols
 import ga_configs
+import genetic_algorithm_results
 import voltage_clamp_optimization_experiments
 
 
@@ -73,21 +74,32 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     steps_in_protocol=8,
     step_duration_bounds=(0.05, 0.6),
     step_voltage_bounds=(-.12, .06),
-    target_currents=None,  # Setting None isolates all currents.  # TODO FIX
-    population_size=30,
-    max_generations=30,
+    target_currents=None,  # Setting None isolates all currents.
+    population_size=4,
+    max_generations=4,
     mate_probability=0.9,
     mutate_probability=0.9,
     gene_swap_probability=0.2,
     gene_mutation_probability=0.2,
     tournament_size=2)
 
+COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
+    currents=[
+        'i_na', 'i_k1', 'i_to',
+        # 'i_ca', 'i_kr', 'i_ks',
+    ],
+    step_range=range(2, 3, 1),
+    adequate_fitness_threshold=0.95,
+    ga_config=VCO_CONFIG)
+
 
 def main():
     start_time = time.time()
-    voltage_clamp_optimization_experiments.run_voltage_clamp_experiment(
-        config=VCO_CONFIG,
-        full_output=True)
+
+    optimal_protocol = voltage_clamp_optimization_experiments.\
+        construct_optimal_protocol(
+            vc_protocol_optimization_config=COMBINED_VC_CONFIG,
+            with_output=True)
 
     elapsed_time = time.time() - start_time
     print('Runtime: {}'.format(elapsed_time))

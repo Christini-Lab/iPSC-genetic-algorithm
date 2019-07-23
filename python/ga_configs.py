@@ -182,7 +182,7 @@ class VoltageOptimizationConfig(GeneticAlgorithmConfig):
         self.target_currents = target_currents
 
 
-class VCProtocolOptimizationConfig:
+class CombinedVCConfig:
     """Config for building a VC protocol from smaller VC protocols.
 
     Attributes:

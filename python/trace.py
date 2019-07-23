@@ -164,23 +164,11 @@ class CurrentResponseInfo:
         df['Max Percent Contribution'] = pd.to_numeric(df['Max Percent Contribution'])
         return df
 
-    def plot_current_contributions(self):
-        time_intervals = []
-        for i in self.protocol.steps:
-            time_intervals.append(
-                self.protocol.get_time_interval_for_voltage(i.voltage))
-        contributions = [self.calculate_current_contribution(*i)
-                         for i in time_intervals]
-        for i in contributions:
-            i.plot.bar(x='Parameter', y='Max Percent Contribution')
-            plt.show()
-
     def get_current_summed(self):
         current = []
         for i in self.currents:
             current.append(sum([j.value for j in i]))
 
-        # TODO refine normalization and outlier removal process.
         median_current = np.median(current)
         for i in range(len(current)):
             if abs(current[i] - median_current) > 5:

@@ -45,45 +45,48 @@ def run_voltage_clamp_experiment(
         print('Best protocol: {}'.format(best_all_around.protocol))
         print('Best protocol\'s fitness: {}'.format(best_all_around.fitness))
 
-        result.graph_current_contributions(
-            individual=best_end,
+        genetic_algorithm_results.graph_current_contributions(
+            protocol=best_end.protocol,
+            config=result.config,
             title='Best individual currents, generation {}'.format(
                 config.max_generations - 1))
 
-        result.graph_current_contributions(
-            individual=best_all_around,
+        genetic_algorithm_results.graph_current_contributions(
+            protocol=best_all_around.protocol,
+            config=result.config,
             title='Best individual currents, all generations')
 
-        genetic_algorithm_results.graph_vc_individual(
-            individual=random_0,
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=random_0.protocol,
             title='Random individual, generation 0')
 
-        genetic_algorithm_results.graph_vc_individual(
-            individual=worst_0,
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=worst_0.protocol,
             title='Worst individual, generation 0')
 
-        genetic_algorithm_results.graph_vc_individual(
-            individual=best_0,
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=best_0.protocol,
             title='Best individual, generation 0')
 
-        genetic_algorithm_results.graph_vc_individual(
-            individual=best_middle,
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=best_middle.protocol,
             title='Best individual, generation {}'.format(
                 config.max_generations // 2))
 
-        genetic_algorithm_results.graph_vc_individual(
-            individual=best_end,
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=best_end.protocol,
             title='Best individual, generation {}'.format(
                 config.max_generations - 1))
 
-        genetic_algorithm_results.graph_vc_individual(
-            individual=best_all_around,
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=best_all_around.protocol,
             title='Best individual, all generations')
     return result
 
 
 def construct_optimal_protocol(
-        vc_protocol_optimization_config: ga_configs.VCProtocolOptimizationConfig
+        vc_protocol_optimization_config: ga_configs.CombinedVCConfig,
+        with_output: bool=False,
 ) -> protocols.VoltageClampProtocol:
     """Constructs the optimal VC protocol to isolate the provided currents.
 
@@ -95,13 +98,25 @@ def construct_optimal_protocol(
         print('Optimizing current: {}'.format(i))
         optimal_protocols.append(find_single_current_optimal_protocol(
             current=i,
-            vc_opt_config=vc_protocol_optimization_config))
-    return combine_protocols(optimal_protocols)
+            vc_opt_config=vc_protocol_optimization_config,
+            with_output=with_output))
+    optimal_protocol = combine_protocols(optimal_protocols)
+
+    if with_output:
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=optimal_protocol,
+            title='Optimal protocol trace')
+        genetic_algorithm_results.graph_current_contributions(
+            protocol=optimal_protocol,
+            config=vc_protocol_optimization_config.ga_config,
+            title='Optimal protocol current contribution.')
+    return optimal_protocol
 
 
 def find_single_current_optimal_protocol(
         current: str,
-        vc_opt_config: ga_configs.VCProtocolOptimizationConfig,
+        vc_opt_config: ga_configs.CombinedVCConfig,
+        with_output: bool=False,
 ) -> protocols.VoltageClampProtocol:
     """Runs genetic algorithm to find optimal VC protocol for a single current.
 
@@ -119,11 +134,27 @@ def find_single_current_optimal_protocol(
         result = run_voltage_clamp_experiment(config=new_ga_config)
         best_individual = get_highest_fitness_individual_overall(result=result)
 
-        if best_individual.fitness > vc_opt_config.adequate_fitness_threshold:
-            return best_individual.protocol
         best_individuals.append(best_individual)
+        if best_individual.fitness > vc_opt_config.adequate_fitness_threshold:
+            break
 
     best_individuals.sort()
+    if with_output:
+        # Set correct target current to only plot one current.
+        vc_opt_config.ga_config.target_currents = [current]
+
+        genetic_algorithm_results.graph_current_contributions(
+            protocol=best_individuals[-1].protocol,
+            config=vc_opt_config.ga_config,
+            title='Max current contributions for {}'.format(current))
+
+        genetic_algorithm_results.graph_vc_protocol(
+            protocol=best_individuals[-1].protocol,
+            title='Max current trace for {}'.format(current))
+
+        # Change back to None.
+        vc_opt_config.ga_config.target_currents = None
+
     return best_individuals[-1].protocol
 
 

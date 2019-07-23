@@ -158,14 +158,6 @@ class TraceTest(unittest.TestCase):
 
         pd.testing.assert_frame_equal(curr_contrib, expected_curr_contrib)
 
-    def test_calculate_current_contribution_single_target_current(self):
-        # TODO implement.
-        pass
-
-    def test_get_current_summed(self):
-        # TODO implement.
-        pass
-
     def test_get_current(self):
         currents = [
             [

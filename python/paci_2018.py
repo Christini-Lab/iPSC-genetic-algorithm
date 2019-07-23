@@ -140,7 +140,7 @@ class PaciModel:
             try:
                 integrate.solve_ivp(
                     self.generate_voltage_clamp_function(protocol),
-                    [0, protocol.voltage_change_endpoints[-1]],
+                    [0, protocol.get_voltage_change_endpoints()[-1]],
                     self.y_initial,
                     method='BDF',
                     max_step=1e-3)
@@ -547,8 +547,6 @@ class PaciModel:
 
         # Ionic concentrations
         # Nai
-        # TODO Nai is now held constant. Model was run for 960 second and the
-        # TODO the value of Nai was around 8.6 at start
         d_y[17] = -self.cm_farad * (
                 i_na + i_na_l + i_b_na + 3.0 * i_na_k + 3.0 * i_na_ca + i_f_na
         ) / (self.f_coulomb_per_mole * self.vc_micrometer_cube * 1.0e-18)

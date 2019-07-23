@@ -25,9 +25,6 @@ class IrregularPacingProtocol:
     # The start of a diastole must be below this voltage, in Vm.
     DIAS_THRESHOLD_VOLTAGE = -0.06
 
-    # TODO find appropriate comment.
-    EPSILON = .0001
-
     # Set to time between naturally occurring spontaneous beats.
     _MAX_STIM_INTERVAL = 1.55
 
@@ -37,7 +34,6 @@ class IrregularPacingProtocol:
     def __init__(self, duration: int, stimulation_offsets: List[float]) -> None:
         self.duration = duration
         self.stimulation_offsets = stimulation_offsets
-        # TODO Consider renaming stimulation times.
         self.all_stimulation_times = []
 
     @property
@@ -86,7 +82,6 @@ class VoltageClampProtocol:
     def __init__(self, steps: List[VoltageClampStep]=None) -> None:
         if steps:
             self.steps = [self.HOLDING_STEP] + steps
-            self.voltage_change_endpoints = self.init_voltage_change_endpoints()
         else:
             self.steps = []
 
@@ -109,7 +104,7 @@ class VoltageClampProtocol:
     def __repr__(self):
         return self.__str__()
 
-    def init_voltage_change_endpoints(self) -> List[float]:
+    def get_voltage_change_endpoints(self) -> List[float]:
         """Initializes voltage change endpoints based on the steps provided.
 
         For example, if the steps provided are:
@@ -130,29 +125,12 @@ class VoltageClampProtocol:
 
     def get_voltage_at_time(self, time: float) -> float:
         """Gets the voltage based on provided steps for the specified time."""
-        step_index = bisect.bisect_left(self.voltage_change_endpoints, time)
-        if step_index != len(self.voltage_change_endpoints):
+        step_index = bisect.bisect_left(
+            self.get_voltage_change_endpoints(),
+            time)
+        if step_index != len(self.get_voltage_change_endpoints()):
             return self.steps[step_index].voltage
         raise ValueError('End of voltage protocol.')
-
-    def get_time_interval_for_voltage(self, voltage):
-        """Retrieves the time interval when a particular voltage was active."""
-        # Todo how should this handle the case when there are more than
-        # Todo one voltages in the protocol?
-        # TODO THIS IS A BUG. UNEXPECTED BEHAVIOR WHEN TWO STEPS HAVE SAME
-        # TODO VOLTAGE
-        for i in range(len(self.steps)):
-            if self.steps[i].voltage == voltage:
-                index = i
-                break
-        else:
-            raise ValueError('Voltage specified is not in protocol.')
-
-        if index == 0:
-            return 0.0, self.voltage_change_endpoints[index]
-        else:
-            return (self.voltage_change_endpoints[index - 1],
-                    self.voltage_change_endpoints[index])
 
 
 PROTOCOL_TYPE = Union[

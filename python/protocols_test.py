@@ -34,7 +34,7 @@ class ProtocolsTest(unittest.TestCase):
 
     # Tests for VoltageClampProtocol
     def test_init_voltage_change_endpoints(self):
-        endpoints = self.voltage_protocol.init_voltage_change_endpoints()
+        endpoints = self.voltage_protocol.get_voltage_change_endpoints()
 
         expected_endpoints = [1, 2.0, 4.5, 4.8]
 
@@ -53,19 +53,6 @@ class ProtocolsTest(unittest.TestCase):
             ValueError,
             self.voltage_protocol.get_voltage_at_time,
             4.9)
-
-    def test_get_time_interval_for_voltage_raises_value_error(self):
-        self.assertRaises(
-            ValueError,
-            self.voltage_protocol.get_time_interval_for_voltage, 0.6)
-
-    def test_get_time_interval_for_voltage_returns_successfully(self):
-        self.assertEqual(
-            self.voltage_protocol.get_time_interval_for_voltage(voltage=0.02),
-            (1.0, 2.0))
-        self.assertEqual(
-            self.voltage_protocol.get_time_interval_for_voltage(voltage=0.05),
-            (4.5, 4.8))
 
     def test_voltage_clamp_init_sets_holding_step(self):
         self.assertEqual(
