@@ -49,13 +49,13 @@ SAP_CONFIG = ga_configs.ParameterTuningConfig(
     max_generations=2,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
-    params_lower_bound=0.5,
-    params_upper_bound=1.5,
+    params_lower_bound=0.1,
+    params_upper_bound=3,
     mate_probability=0.9,
-    mutate_probability=1.0,
-    gene_swap_probability=0.5,
-    gene_mutation_probability=0.1,
-    tournament_size=2)
+    mutate_probability=0.9,
+    gene_swap_probability=0.2,
+    gene_mutation_probability=0.2,
+    tournament_size=4)
 
 IP_CONFIG = ga_configs.ParameterTuningConfig(
     population_size=2,
@@ -97,18 +97,8 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 def main():
     start_time = time.time()
 
-    # parameter_tuning_experiments.run_param_tuning_experiment(
-    #     config=SAP_CONFIG,
-    #     with_output=True)
-    # parameter_tuning_experiments.run_comparison_experiment(
-    #     configs=[SAP_CONFIG, IP_CONFIG],
-    #     iterations=2)
-    # voltage_clamp_optimization_experiments.construct_optimal_protocol(
-    #     vc_protocol_optimization_config=COMBINED_VC_CONFIG,
-    #     with_output=True)
-    parameter_tuning_experiments.plot_baseline_single_action_potential_trace()
-    parameter_tuning_experiments.plot_baseline_voltage_clamp_trace()
-    parameter_tuning_experiments.plot_baseline_irregular_pacing_trace()
+    parameter_tuning_experiments.run_param_tuning_experiment(
+        config=SAP_CONFIG, with_output=True)
 
     elapsed_time = time.time() - start_time
     print('Runtime: {}'.format(elapsed_time))
