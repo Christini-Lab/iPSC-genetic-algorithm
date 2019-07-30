@@ -138,7 +138,7 @@ class TestGeneticAlgorithmResults(unittest.TestCase):
         df_two = pd.DataFrame(
             {'Parameter': ['i_k1', 'i_ks'], 'Max Percent Contribution': [0.2, 0.8]})
 
-        max_contributions = genetic_algorithm_results._get_max_contributions(
+        max_contributions = genetic_algorithm_results.get_max_contributions(
             contributions=[df_one, df_two])
         expected_max_contributions_dict = {
             'Max Percent Contribution': {'i_k1': 0.6, 'i_ks': 0.8}

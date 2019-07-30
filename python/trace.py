@@ -64,12 +64,18 @@ class IrregularPacingInfo:
             trace=trace,
             timings=self.apd_90s)
 
-        peaks = plt.scatter(self.peaks, peak_y_values, c='red')
+        peaks = plt.scatter(
+            [i * 1000 for i in self.peaks],
+            [i * 1000 for i in peak_y_values], c='red')
         apd_end = plt.scatter(
-            self.apd_90s,
-            apd_end_y_values,
+            [i * 1000 for i in self.apd_90s],
+            [i * 1000 for i in apd_end_y_values],
             c='orange')
-        plt.legend((peaks, apd_end), ('Peaks', 'APD 90'), loc='upper right')
+        plt.legend(
+            (peaks, apd_end),
+            ('Peaks', 'APD 90'),
+            loc='upper right',
+            bbox_to_anchor=(1, 1.1))
 
     def detect_peak(self,
                     t: List[float],
@@ -161,7 +167,8 @@ class CurrentResponseInfo:
         df = pd.DataFrame(
             data={'Parameter': parameter_names,
                   'Max Percent Contribution': percent_contributions})
-        df['Max Percent Contribution'] = pd.to_numeric(df['Max Percent Contribution'])
+        df['Max Percent Contribution'] = pd.to_numeric(
+            df['Max Percent Contribution'])
         return df
 
     def get_current_summed(self):
@@ -169,12 +176,13 @@ class CurrentResponseInfo:
         for i in self.currents:
             current.append(sum([j.value for j in i]))
 
+        current = [i / 100 for i in current]
         median_current = np.median(current)
         for i in range(len(current)):
-            if abs(current[i] - median_current) > 5:
+            if abs(current[i] - median_current) > 0.1:
                 current[i] = 0
-        normalized = 2. * (current - np.min(current)) / np.ptp(current) - 1
-        return normalized / 4
+
+        return current
 
     def get_single_current_values(self, current_name: str) -> List[float]:
         # Find the index of the specified current.
@@ -230,20 +238,45 @@ class Trace:
         self.current_response_info = current_response_info
 
     def plot(self):
-        plt.plot(self.t, self.y)
+        plt.figure(figsize=(10, 5))
+        ax = plt.subplot()
+        plt.plot(
+            [i * 1000 for i in self.t],
+            [i * 1000 for i in self.y],
+            color='b')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        plt.xlabel('Time (ms)')
+        plt.ylabel(r'$V_m$ (mV)')
 
-    def plot_with_currents(self):
+    def plot_with_currents(self, title=None):
         if not self.current_response_info:
             return ValueError('Trace does not have current info stored. Trace '
                               'was not generated with voltage clamp protocol.')
+        fig = plt.figure(figsize=(10, 5))
 
-        voltage_line, = plt.plot(self.t, self.y, 'b', label='Voltage')
-        current_line, = plt.plot(
-            self.t,
-            self.current_response_info.get_current_summed(),
+        ax_1 = fig.add_subplot(111)
+        ax_1.plot(
+            [1000 * i for i in self.t],
+            [i * 1000 for i in self.y],
+            'b',
+            label='Voltage')
+        plt.xlabel('Time (ms)')
+        plt.ylabel(r'$V_m$ (mV)')
+
+        ax_2 = fig.add_subplot(111, sharex=ax_1, frameon=False)
+        ax_2.plot(
+            [1000 * i for i in self.t],
+            [i * 1000 for i in self.current_response_info.get_current_summed()],
             'r--',
             label='Current')
-        plt.legend(handles=[voltage_line, current_line])
+        ax_2.yaxis.tick_right()
+        ax_2.yaxis.set_label_position("right")
+        plt.ylabel(r'$I_m$ (nA/nF)')
+
+        ax_1.spines['top'].set_visible(False)
+        if title:
+            plt.title(r'{}'.format(title))
 
     def plot_only_currents(self, color):
         if not self.current_response_info:

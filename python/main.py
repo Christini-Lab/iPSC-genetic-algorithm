@@ -2,6 +2,7 @@
 
 Use functions in parameter_tuning_experiments.py to run GAs."""
 
+import copy
 import time
 
 import parameter_tuning_experiments
@@ -12,16 +13,16 @@ import voltage_clamp_optimization_experiments
 
 
 PARAMETERS = [
-    ga_configs.Parameter(name='g_na', default_value=3671.2302),
-    ga_configs.Parameter(name='g_f_s', default_value=30.10312),
-    ga_configs.Parameter(name='g_ks_s', default_value=2.041),
-    ga_configs.Parameter(name='g_kr_s', default_value=29.8667),
-    ga_configs.Parameter(name='g_k1_s', default_value=28.1492),
-    ga_configs.Parameter(name='g_b_na', default_value=0.95),
-    ga_configs.Parameter(name='g_na_lmax', default_value=17.25),
-    ga_configs.Parameter(name='g_ca_l', default_value=8.635702e-5),
-    ga_configs.Parameter(name='g_p_ca', default_value=0.4125),
-    ga_configs.Parameter(name='g_b_ca', default_value=0.727272),
+    ga_configs.Parameter(name='G_Na', default_value=3671.2302),
+    ga_configs.Parameter(name='G_F', default_value=30.10312),
+    ga_configs.Parameter(name='G_Ks', default_value=2.041),
+    ga_configs.Parameter(name='G_Kr', default_value=29.8667),
+    ga_configs.Parameter(name='G_K1', default_value=28.1492),
+    ga_configs.Parameter(name='G_bNa', default_value=0.95),
+    ga_configs.Parameter(name='G_NaL', default_value=17.25),
+    ga_configs.Parameter(name='G_CaL', default_value=8.635702e-5),
+    ga_configs.Parameter(name='G_pCa', default_value=0.4125),
+    ga_configs.Parameter(name='G_bCa', default_value=0.727272),
 ]
 # Parameters are sorted alphabetically to maintain order during each
 # generation of the genetic algorithm.
@@ -44,8 +45,8 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
 )
 
 SAP_CONFIG = ga_configs.ParameterTuningConfig(
-    population_size=10,
-    max_generations=10,
+    population_size=2,
+    max_generations=2,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.5,
@@ -74,9 +75,9 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     steps_in_protocol=8,
     step_duration_bounds=(0.05, 0.6),
     step_voltage_bounds=(-.12, .06),
-    target_currents=None,  # Setting None isolates all currents.
-    population_size=4,
-    max_generations=4,
+    target_currents=['I_Na', 'I_K1', 'I_To', 'I_CaL', 'I_Kr', 'I_Ks'],
+    population_size=2,
+    max_generations=2,
     mate_probability=0.9,
     mutate_probability=0.9,
     gene_swap_probability=0.2,
@@ -85,8 +86,8 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
 
 COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
     currents=[
-        'i_na', 'i_k1', 'i_to',
-        # 'i_ca', 'i_kr', 'i_ks',
+        'I_Na', 'I_K1', 'I_To',
+        'I_CaL', 'I_Kr', 'I_Ks',
     ],
     step_range=range(2, 3, 1),
     adequate_fitness_threshold=0.95,
@@ -96,10 +97,18 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 def main():
     start_time = time.time()
 
-    optimal_protocol = voltage_clamp_optimization_experiments.\
-        construct_optimal_protocol(
-            vc_protocol_optimization_config=COMBINED_VC_CONFIG,
-            with_output=True)
+    # parameter_tuning_experiments.run_param_tuning_experiment(
+    #     config=SAP_CONFIG,
+    #     with_output=True)
+    # parameter_tuning_experiments.run_comparison_experiment(
+    #     configs=[SAP_CONFIG, IP_CONFIG],
+    #     iterations=2)
+    # voltage_clamp_optimization_experiments.construct_optimal_protocol(
+    #     vc_protocol_optimization_config=COMBINED_VC_CONFIG,
+    #     with_output=True)
+    parameter_tuning_experiments.plot_baseline_single_action_potential_trace()
+    parameter_tuning_experiments.plot_baseline_voltage_clamp_trace()
+    parameter_tuning_experiments.plot_baseline_irregular_pacing_trace()
 
     elapsed_time = time.time() - start_time
     print('Runtime: {}'.format(elapsed_time))

@@ -73,12 +73,13 @@ class PaciModel:
                       0, 0.1, 1, 0, 9.2, 0, 0.75, 0.3, 0.9, 0.1]
 
     def __init__(self, updated_parameters=None):
-        self.default_parameters = {'g_na': 3671.2302, 'g_ca_l': 8.635702e-5,
-                                   'g_f_s': 30.10312, 'g_ks_s': 2.041,
-                                   'g_kr_s': 29.8667, 'g_k1_s': 28.1492,
-                                   'g_p_ca': 0.4125, 'g_b_na': 0.95,
-                                   'g_b_ca': 0.727272,
-                                   'g_na_lmax': 17.25}
+        self.default_parameters = {'G_Na': 3671.2302, 'G_CaL': 8.635702e-5,
+                                   'G_F': 30.10312, 'G_Ks': 2.041,
+                                   'G_Kr': 29.8667, 'G_K1': 28.1492,
+                                   'G_pCa': 0.4125, 'G_bNa': 0.95,
+                                   'G_bCa': 0.727272,
+                                   'G_NaL': 17.25}
+
         if updated_parameters:
             self.default_parameters.update(updated_parameters)
         self.t = []
@@ -219,7 +220,7 @@ class PaciModel:
         # iNa
         i_na = ((t < self.t_drug_application) * 1 + (
                     t >= self.t_drug_application)
-                * self.i_na_f_red_med) * self.default_parameters['g_na'] * y[
+                * self.i_na_f_red_med) * self.default_parameters['G_Na'] * y[
                    13] ** 3.0 * y[11] * y[12] * \
                (y[0] - e_na)
 
@@ -267,7 +268,7 @@ class PaciModel:
         my_coef_tau_m = 1
         tau_i_na_l_ms = 200
         vh_h_late = 87.61
-        i_na_l = self.default_parameters['g_na_lmax'] * y[18] ** 3 * y[19] * (
+        i_na_l = self.default_parameters['G_NaL'] * y[18] ** 3 * y[19] * (
                     y[0] - e_na)
 
         m_inf_l = 1 / (1 + np.exp(-(y[0] * 1000 + 42.85) / 5.264))
@@ -283,8 +284,8 @@ class PaciModel:
 
         # i f
         e_f_volt = -0.017
-        i_f = self.default_parameters['g_f_s'] * y[14] * (y[0] - e_f_volt)
-        i_f_na = 0.42 * self.default_parameters['g_f_s'] * y[14] * (
+        i_f = self.default_parameters['G_F'] * y[14] * (y[0] - e_f_volt)
+        i_f_na = 0.42 * self.default_parameters['G_F'] * y[14] * (
                     y[0] - e_na)
 
         xf_infinity = 1.0 / (1.0 + np.exp((y[0] * 1000.0 + 77.85) / 5.0))
@@ -295,7 +296,7 @@ class PaciModel:
         i_ca_l = ((t < self.t_drug_application) * 1 + (
                     t >= self.t_drug_application) *
                   self.i_ca_l_red_med) * self.default_parameters[
-                     'g_ca_l'] * 4.0 * y[0] \
+                     'G_CaL'] * 4.0 * y[0] \
                  * self.f_coulomb_per_mole ** 2.0 / (
                          self.r_joule_per_mole_kelvin * self.t_kelvin) * \
                  (y[2] * np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
@@ -367,7 +368,7 @@ class PaciModel:
         # i Ks
         i_ks = ((t < self.t_drug_application) * 1 + (
                     t >= self.t_drug_application) *
-                self.i_ks_red_med) * self.default_parameters['g_ks_s'] * (
+                self.i_ks_red_med) * self.default_parameters['G_Ks'] * (
                            y[0] - e_ks) * y[10] ** 2.0 * \
                (1.0 + 0.6 / (1.0 + (3.8 * 0.00001 / y[2]) ** 1.4))
 
@@ -382,7 +383,7 @@ class PaciModel:
         q = 2.3  # dimensionless (in i_Kr_Xr1_gate)
         i_kr = ((t < self.t_drug_application) * 1 + (
                 t >= self.t_drug_application) * self.i_kr_red_med) * \
-               self.default_parameters['g_kr_s'] * (
+               self.default_parameters['G_Kr'] * (
                        y[0] - e_k) * y[8] * y[9] * sqrt(
             self.ko_millimolar / 5.4)
 
@@ -411,7 +412,7 @@ class PaciModel:
             0.5886 * (y[0] * 1000.0 - e_k * 1000.0 - 10.0))) / (
                           1.0 + np.exp(0.4547 * (y[0] * 1000.0 - e_k * 1000.0)))
         xk1_inf = alpha_k1 / (alpha_k1 + beta_k1)
-        i_k1 = self.default_parameters['g_k1_s'] * xk1_inf * (
+        i_k1 = self.default_parameters['G_K1'] * xk1_inf * (
                     y[0] - e_k) * sqrt(self.ko_millimolar / 5.4)
 
         # i NaCa
@@ -487,13 +488,13 @@ class PaciModel:
 
         # i pCa
         kp_ca_millimolar = 0.0005
-        i_p_ca = self.default_parameters['g_p_ca'] * y[2] / (
+        i_p_ca = self.default_parameters['G_pCa'] * y[2] / (
                     y[2] + kp_ca_millimolar)
 
         # Background currents
-        i_b_na = self.default_parameters['g_b_na'] * (y[0] - e_na)
+        i_b_na = self.default_parameters['G_bCa'] * (y[0] - e_na)
 
-        i_b_ca = self.default_parameters['g_b_ca'] * (y[0] - e_ca)
+        i_b_ca = self.default_parameters['G_bCa'] * (y[0] - e_ca)
 
         # Sarcoplasmic reticulum
         i_up = self.vmax_up_millimolar_per_second / (
@@ -567,19 +568,19 @@ class PaciModel:
 
         if self.current_response_info:
             current_timestep = [
-                trace.Current(name='i_k1', value=i_k1),
-                trace.Current(name='i_to', value=i_to),
-                trace.Current(name='i_kr', value=i_kr),
-                trace.Current(name='i_ks', value=i_ks),
-                trace.Current(name='i_ca_l', value=i_ca_l),
-                trace.Current(name='i_na_k', value=i_na_k),
-                trace.Current(name='i_na', value=i_na),
-                trace.Current(name='i_na_l', value=i_na_l),
-                trace.Current(name='i_na_ca', value=i_na_ca),
-                trace.Current(name='i_p_ca', value=i_p_ca),
-                trace.Current(name='i_f', value=i_f),
-                trace.Current(name='i_b_na', value=i_b_na),
-                trace.Current(name='i_b_ca', value=i_b_ca),
+                trace.Current(name='I_K1', value=i_k1),
+                trace.Current(name='I_To', value=i_to),
+                trace.Current(name='I_Kr', value=i_kr),
+                trace.Current(name='I_Ks', value=i_ks),
+                trace.Current(name='I_CaL', value=i_ca_l),
+                trace.Current(name='I_NaK', value=i_na_k),
+                trace.Current(name='I_Na', value=i_na),
+                trace.Current(name='I_NaL', value=i_na_l),
+                trace.Current(name='I_NaCa', value=i_na_ca),
+                trace.Current(name='I_pCa', value=i_p_ca),
+                trace.Current(name='I_F', value=i_f),
+                trace.Current(name='I_bNa', value=i_b_na),
+                trace.Current(name='I_bCa', value=i_b_ca),
             ]
             self.current_response_info.currents.append(current_timestep)
 

@@ -4,10 +4,11 @@ Additionally, the classes in this module allow for figure generation.
 """
 
 from abc import ABC
+import copy
 import enum
 import math
 import random
-from typing import List
+from typing import Dict, List, Union
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -98,10 +99,10 @@ class GeneticAlgorithmResult(ABC):
         cbar_ticks = [math.pow(10, i) for i in tick_range]
         log_norm = LogNorm(vmin=data.min().min(), vmax=data.max().max())
 
-        plt.figure()
+        plt.figure(figsize=(10, 5))
         ax = sns.heatmap(
             data,
-            cmap='RdBu',
+            cmap='viridis',
             xticklabels=2,
             yticklabels=2,
             norm=log_norm,
@@ -110,13 +111,21 @@ class GeneticAlgorithmResult(ABC):
         hfont = {'fontname': 'Helvetica'}
         plt.xlabel('Generation', **hfont)
         plt.ylabel('Individual', **hfont)
+        plt.xticks(
+            [i for i in range(0, self.config.max_generations, 5)],
+            [i for i in range(0, self.config.max_generations, 5)])
+        plt.yticks(
+            [i for i in range(0, self.config.population_size, 5)],
+            [i for i in range(0, self.config.population_size, 5)])
+
         ax.invert_yaxis()
-        ax.axhline(linewidth=4, color='black')
-        ax.axvline(linewidth=4, color='black')
         ax.collections[0].colorbar.set_label('Error')
-        plt.savefig('figures/heatmap.png')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        plt.savefig('figures/Parameter Tuning Figure/heatmap.svg')
 
     def plot_error_scatter(self):
+        plt.figure(figsize=(10, 5))
         x_data = []
         y_data = []
         for i in range(self.config.max_generations):
@@ -156,9 +165,10 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
             self.baseline_trace.plot_only_currents(color='black')
         else:
             plt.plot(
-                self.baseline_trace.t,
-                self.baseline_trace.y,
+                [i * 1000 for i in self.baseline_trace.t],
+                [i * 1000 for i in self.baseline_trace.y],
                 color='black')
+
         trace = paci_2018.generate_trace(
             tunable_parameters=self.config.tunable_parameters,
             protocol=self.config.protocol,
@@ -167,7 +177,13 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
             if isinstance(self.config.protocol, protocols.VoltageClampProtocol):
                 trace.plot_only_currents(color='b--')
             else:
-                plt.plot(trace.t, trace.y, 'b--')
+                plt.plot(
+                    [i * 1000 for i in trace.t],
+                    [i * 1000 for i in trace.y],
+                    'b--')
+
+        plt.xlabel('Time (ms)')
+        plt.ylabel(r'$V_m$ (mV)')
         return trace
 
     def graph_individual_with_param_set(self, individual, title=''):
@@ -184,24 +200,49 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
         Returns:
             None.
         """
-        plt.figure()
-        plt.subplot(1, 2, 1)
-        self.graph_individual(individual)
+        fig = plt.figure(figsize=(10, 5))
+        fig.suptitle(title)
 
-        plt.subplot(1, 2, 2)
+        ax_1 = plt.subplot(1, 2, 1)
+        plt.plot(
+            [i * 1000 for i in self.baseline_trace.t],
+            [i * 1000 for i in self.baseline_trace.y],
+            color='black')
+        i_trace = paci_2018.generate_trace(
+            tunable_parameters=self.config.tunable_parameters,
+            protocol=self.config.protocol,
+            params=individual.parameters)
+        plt.plot(
+            [i * 1000 for i in i_trace.t],
+            [i * 1000 for i in i_trace.y],
+            'b--')
+        ax_1.spines['right'].set_visible(False)
+        ax_1.spines['top'].set_visible(False)
+        plt.xlabel('Time (ms)')
+        plt.ylabel(r'$V_m$ (mV)')
+
+        ax_2 = plt.subplot(1, 2, 2)
         parameter_scaling = self.get_parameter_scales(individual=individual)
         parameter_indices = [i for i in range(len(individual.parameters))]
 
-        plt.barh(
+        x = parameter_indices
+        y = np.array(parameter_scaling)
+        color = np.where(y >= 1, 'green', 'red')
+        plt.vlines(x=x, ymin=1, ymax=y, color=color, alpha=0.75, linewidth=5)
+        plt.scatter(x, y, color=color, s=20, alpha=1)
+        plt.axhline(1, linewidth=0.5, linestyle='--', color='gray')
+        plt.xlabel('Parameters')
+        plt.ylabel('Scaling')
+        plt.xticks(
             parameter_indices,
-            parameter_scaling,
-            height=0.2,
-            align='center')
-        plt.xlabel('Parameter scaling')
-        plt.ylabel('Parameters')
-        plt.title(title)
-        plt.yticks(parameter_indices, parameter_indices)
-        plt.xticks([i for i in range(4)], [i for i in range(4)])
+            ['$G_{{{}}}$'.format(i.name[2:])
+             for i in self.config.tunable_parameters])
+        plt.yticks([i for i in range(0, 4)], [i for i in range(0, 4)])
+        ax_2.spines['right'].set_visible(False)
+        ax_2.spines['top'].set_visible(False)
+
+        fig.subplots_adjust(wspace=.35)
+        plt.savefig('figures/Parameter Tuning Figure/{}.svg'.format(title))
 
     def graph_error_over_generation(self, with_scatter=False):
         """Graphs the change in error over generations."""
@@ -210,27 +251,38 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
 
         for i in range(len(self.generations)):
             best_individual_errors.append(
-                self.get_high_fitness_individual(i).fitness)
+                self.get_low_fitness_individual(i).fitness)
             mean_errors.append(
                 np.mean([j.fitness for j in self.generations[i]]))
 
-        plt.figure()
+        plt.figure(figsize=(10, 5))
+        ax = plt.subplot()
         if with_scatter:
             self.plot_error_scatter()
         mean_error_line, = plt.plot(
             range(len(self.generations)),
             mean_errors,
-            label='Mean Error')
+            label='Mean Error of Individuals',
+            color='b')
         best_individual_error_line, = plt.plot(
             range(len(self.generations)),
             best_individual_errors,
-            label='Best Individual')
-        plt.xticks(range(len(self.generations)))
+            label='Lowest Error of an Individual',
+            color='green')
+        plt.xticks(
+            [i for i in range(0, self.config.max_generations, 5)],
+            [i for i in range(0, self.config.max_generations, 5)])
         hfont = {'fontname': 'Helvetica'}
         plt.xlabel('Generation', **hfont)
-        plt.ylabel('Individual', **hfont)
-        plt.legend(handles=[mean_error_line, best_individual_error_line])
-        plt.savefig('figures/error_over_generation.png')
+        plt.ylabel('Error', **hfont)
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+        plt.legend(
+            handles=[mean_error_line, best_individual_error_line],
+            loc='upper right',
+            bbox_to_anchor=(1, 1.1))
+        plt.savefig('figures/Parameter Tuning Figure/error_over_generation.svg')
 
 
 class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
@@ -313,6 +365,106 @@ def graph_vc_protocol(protocol: protocols.VoltageClampProtocol,
             protocol))
 
 
+def graph_optimized_vc_protocol_full_figure(
+        single_current_protocols: Dict[str, protocols.VoltageClampProtocol],
+        combined_protocol: protocols.VoltageClampProtocol,
+        config: ga_configs.VoltageOptimizationConfig) -> None:
+    """Graphs a full figure for a optimized voltage protocol."""
+    # Plot combined trace.
+    plt.figure(figsize=(20, 10))
+    i_trace = paci_2018.generate_trace(protocol=combined_protocol)
+    i_trace.plot_with_currents(title='')
+    plt.savefig('figures/Full VC Optimization Figure/Combined trace.svg')
+
+    # Plot single current traces.
+    i = 1
+    for key in sorted(single_current_protocols.keys()):
+        plt.figure(figsize=(10, 5))
+        i_trace = paci_2018.generate_trace(
+            protocol=single_current_protocols[key])
+        i_trace.plot_with_currents(title=r'$I_{{{}}}$'.format(key[2:]))
+        i += 1
+        plt.savefig(
+            'figures/Full VC Optimization Figure/'
+            '{} single current trace.svg'.format(key))
+
+    # Plot current contributions for combined trace.
+    graph_combined_current_contributions(
+        protocol=combined_protocol,
+        config=config,
+        title='Combined current contributions'
+    )
+
+    # Plot single current max contributions.
+    graph_single_current_contributions(
+        single_current_protocols=single_current_protocols,
+        config=config,
+        title='Single current contributions')
+
+
+def graph_single_current_contributions(
+        single_current_protocols: Dict[str, protocols.VoltageClampProtocol],
+        config: ga_configs.VoltageOptimizationConfig,
+        title: str) -> None:
+    """Graphs the max current contributions for single currents together."""
+    single_current_max_contributions = {}
+    for key, value in single_current_protocols.items():
+        i_trace = paci_2018.generate_trace(protocol=value)
+        new_config = copy.deepcopy(config)
+        new_config.target_currents = [key]
+        single_current_max_contributions[key] = _calc_fitness_score(
+            get_contributions(i_trace=i_trace, config=new_config))
+
+    graph_current_contributions_helper(
+        currents=single_current_max_contributions.keys(),
+        contributions=single_current_max_contributions.values(),
+        title=title)
+
+
+def graph_combined_current_contributions(
+        protocol: protocols.VoltageClampProtocol,
+        config: ga_configs.VoltageOptimizationConfig,
+        title: str) -> None:
+    """Graphs the max current contributions for a single protocol."""
+    i_trace = paci_2018.generate_trace(protocol=protocol)
+    max_contributions = get_max_contributions(
+        get_contributions(i_trace=i_trace, config=config))
+    currents = []
+    contributions = []
+    max_contrib_dict = max_contributions.to_dict()['Max Percent Contribution']
+    for key, val in max_contrib_dict.items():
+        currents.append(key)
+        contributions.append(val)
+    graph_current_contributions_helper(
+        currents=currents,
+        contributions=contributions,
+        title=title)
+
+
+def graph_current_contributions_helper(currents, contributions, title):
+    plt.figure()
+    sns.set(style="white")
+
+    # Sort currents according to alphabetic order.
+    zipped_list = sorted(zip(currents, contributions))
+    contributions = [contrib for _, contrib in zipped_list]
+    currents = [curr for curr, _ in zipped_list]
+
+    currents = ['$I_{{{}}}$'.format(i[2:]) for i in currents]
+    ax = sns.barplot(
+        x=currents,
+        y=[i * 100 for i in contributions],
+        color='gray',
+        linewidth=0.75)
+    ax.set_ylabel('Percent Contribution')
+    ax.set_yticks([i for i in range(0, 120, 20)])
+    ax.set_ybound(lower=0, upper=100)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=-30)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.savefig('figures/Full VC Optimization Figure/{}.svg'.format(title))
+
+
 class Individual:
     """Represents an individual in a genetic algorithm population.
 
@@ -391,22 +543,6 @@ class VCOptimizationIndividual(Individual):
             contributions=get_contributions(i_trace=i_trace, config=config))
 
 
-def graph_current_contributions(protocol: protocols.VoltageClampProtocol,
-                                config: ga_configs.VoltageOptimizationConfig,
-                                title: str) -> None:
-    """Graphs the max current contributions at any time for all currents."""
-    i_trace = paci_2018.generate_trace(protocol=protocol)
-    if not i_trace:
-        raise ValueError('Individual could not produce a valid trace.')
-
-    max_contributions = _get_max_contributions(
-        get_contributions(i_trace=i_trace, config=config))
-
-    ax = max_contributions.plot.bar()
-    ax.set_ylim(0, 1.0)
-    plt.savefig('figures/{}.png'.format(title))
-
-
 def get_contributions(
         i_trace: trace.Trace,
         config: ga_configs.VoltageOptimizationConfig) -> List[pd.DataFrame]:
@@ -424,7 +560,7 @@ def get_contributions(
     return contributions
 
 
-def _get_max_contributions(contributions: List[pd.DataFrame]) -> pd.DataFrame:
+def get_max_contributions(contributions: List[pd.DataFrame]) -> pd.DataFrame:
     """Gets the max contributions for each current."""
     combined_current_contributions = pd.concat(contributions)
     max_contributions = combined_current_contributions.groupby(
@@ -437,5 +573,5 @@ def _calc_fitness_score(contributions: List[pd.DataFrame]) -> int:
 
     Sums the max contributions for each parameter.
     """
-    return _get_max_contributions(
+    return get_max_contributions(
         contributions=contributions)['Max Percent Contribution'].sum()

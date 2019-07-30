@@ -38,11 +38,15 @@ class ParameterTuningGeneticAlgorithm:
         self.baseline_trace = paci_2018.generate_trace(
             tunable_parameters=config.tunable_parameters,
             protocol=config.protocol)
+        self.max_error = determine_max_error_from_baseline_trace(
+            baseline_trace=self.baseline_trace)
 
         if config.secondary_protocol:
             self.secondary_baseline_trace = paci_2018.generate_trace(
                 tunable_parameters=config.tunable_parameters,
                 protocol=config.secondary_protocol)
+            self.secondary_max_error = determine_max_error_from_baseline_trace(
+                baseline_trace=self.secondary_baseline_trace)
 
     def run(self) -> genetic_algorithm_results.GAResultParameterTuning:
         """Runs an instance of the genetic algorithm."""
@@ -120,13 +124,12 @@ class ParameterTuningGeneticAlgorithm:
             params=new_parameters)
 
         if not primary_trace:
-            error = ga_configs.get_appropriate_max_error(
-                protocol=self.config.protocol)
+            error = self.max_error
         else:
             error = _evaluate_performance_based_on_protocol(
                 protocol=self.config.protocol,
                 baseline_trace=self.baseline_trace,
-                indiv_trace=primary_trace)
+                indiv_trace=primary_trace) / self.max_error
 
         if hasattr(self, 'secondary_baseline_trace'):
             secondary_trace = paci_2018.generate_trace(
@@ -135,13 +138,12 @@ class ParameterTuningGeneticAlgorithm:
                 params=new_parameters)
 
             if not secondary_trace:
-                error += ga_configs.get_appropriate_max_error(
-                    protocol=self.config.secondary_protocol)
+                error += self.secondary_max_error
             else:
                 error += _evaluate_performance_based_on_protocol(
                     protocol=self.config.secondary_protocol,
                     baseline_trace=self.secondary_baseline_trace,
-                    indiv_trace=secondary_trace)
+                    indiv_trace=secondary_trace) / self.secondary_max_error
         return error
 
     def _mate(self, i_one: List[List[float]], i_two: List[List[float]]) -> None:
@@ -257,9 +259,21 @@ def _evaluate_performance_voltage_clamp(baseline_trace: trace.Trace,
     return error
 
 
+def determine_max_error_from_baseline_trace(baseline_trace: trace.Trace
+                                            ) -> float:
+    """Determines the max error from the baseline trace.
+
+    Used to normalize error for comparative analysis.
+    """
+    max_error = 0
+    for i in baseline_trace.y:
+        max_error += (i - 0) ** 2
+    return max_error
+
+
 def generate_statistics(population: List[List[List[float]]]) -> None:
     fitness_values = [i.fitness.values[0] for i in population]
-    print('  Min error: {}'.format(min(fitness_values)))
-    print('  Max error: {}'.format(max(fitness_values)))
-    print('  Average error: {}'.format(np.mean(fitness_values)))
+    print('  Min fitness: {}'.format(min(fitness_values)))
+    print('  Max fitness: {}'.format(max(fitness_values)))
+    print('  Average fitness: {}'.format(np.mean(fitness_values)))
     print('  Standard deviation: {}'.format(np.std(fitness_values)))

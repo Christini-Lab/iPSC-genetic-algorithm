@@ -108,7 +108,7 @@ def generate_parameter_scaling_figure(
 
     param_example_df = pd.DataFrame(
         np.array(examples),
-        columns=['Parameter Scaling', 'Parameter', 'Protocol Type'])
+        columns=['Parameter Scaling', 'Parameter', 'Target Objective'])
     # Convert parameter value column, which is defaulted to object, to numeric
     # type.
     param_example_df['Parameter Scaling'] = pd.to_numeric(
@@ -118,13 +118,14 @@ def generate_parameter_scaling_figure(
     ax = sns.stripplot(
         x='Parameter',
         y='Parameter Scaling',
-        hue='Protocol Type',
+        hue='Target Objective',
         data=param_example_df,
         palette='Set2',
         dodge=True)
     for i in range(0, len(tunable_params), 2):
         ax.axvspan(i + 0.5, i + 1.5, facecolor='lightgrey', alpha=0.3)
-    plt.savefig('figures/parameter_scaling.png')
+    plt.savefig(
+        'figures/Parameter Tuning Comparison Figure/parameter_scaling.svg')
 
 
 def generate_error_strip_plot(
@@ -132,13 +133,17 @@ def generate_error_strip_plot(
                       List[genetic_algorithm_results.GeneticAlgorithmResult]]
 ) -> None:
     df = _generate_error_strip_plot_data_frame(results=results)
-    plt.figure()
+    plt.figure(figsize=(10, 5))
+    ax = plt.subplot()
     sns.stripplot(
-        x='Protocol Type',
-        y='Error',
+        x='Target Objective',
+        y='Normalized Error',
         data=df,
         palette='Set2')
-    plt.savefig('figures/error_strip_plot.png')
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.savefig(
+        'figures/Parameter Tuning Comparison Figure/error_strip_plot.svg')
 
 
 def _generate_error_strip_plot_data_frame(
@@ -153,7 +158,8 @@ def _generate_error_strip_plot_data_frame(
                 generation=result.config.max_generations - 1)
             errors.append(best_individual.fitness)
             protocol_types.append(key)
-    return pd.DataFrame(data={'Error': errors, 'Protocol Type': protocol_types})
+    return pd.DataFrame(
+        data={'Normalized Error': errors, 'Target Objective': protocol_types})
 
 
 def _make_parameter_scaling_examples(
@@ -215,13 +221,13 @@ def _has_unique_protocols(
 
 def run_param_tuning_experiment(
         config: ga_configs.ParameterTuningConfig,
-        full_output: bool=False
+        with_output: bool=False
 ) -> genetic_algorithm_results.GeneticAlgorithmResult:
     ga = parameter_tuning_genetic_algorithm.ParameterTuningGeneticAlgorithm(
         config=config)
     ga_result = ga.run()
 
-    if full_output:
+    if with_output:
         ga_result.generate_heatmap()
         ga_result.graph_error_over_generation(with_scatter=False)
 
@@ -236,39 +242,25 @@ def run_param_tuning_experiment(
         ga_result.graph_individual_with_param_set(
             individual=random_0,
             title='Random individual, generation 0')
-        plt.savefig('figures/Random individual, generation 0.png')
 
         ga_result.graph_individual_with_param_set(
             individual=worst_0,
             title='Worst individual, generation 0')
-        plt.savefig('figures/Worst individual, generation 0')
 
         ga_result.graph_individual_with_param_set(
             individual=best_0,
             title='Best individual, generation 0')
-        plt.savefig('figures/Best individual, generation 0')
 
         ga_result.graph_individual_with_param_set(
             individual=best_middle,
             title='Best individual, generation {}'.format(
-                config.max_generations // 2))
-        plt.savefig('figures/Best individual, generation {}'.format(
                 config.max_generations // 2))
 
         ga_result.graph_individual_with_param_set(
             individual=best_end,
             title='Best individual, generation {}'.format(
                 config.max_generations - 1))
-        plt.savefig('figures/Best individual, generation {}'.format(
-                config.max_generations - 1))
     return ga_result
-
-
-def plot_baseline_single_action_potential_trace():
-    trace = paci_2018.generate_trace(
-        protocol=protocols.SingleActionPotentialProtocol(duration=5))
-    trace.plot()
-    plt.savefig('figures/baseline_single_action_potential_trace.png')
 
 
 def plot_all_in_system_of_equations(duration=10):
@@ -283,6 +275,14 @@ def plot_all_in_system_of_equations(duration=10):
             model.y_names[i]))
 
 
+def plot_baseline_single_action_potential_trace():
+    trace = paci_2018.generate_trace(
+        protocol=protocols.SingleActionPotentialProtocol(duration=2))
+    trace.plot()
+    plt.savefig(
+        'figures/Single AP Figure/baseline_single_action_potential_trace.svg')
+
+
 def plot_baseline_irregular_pacing_trace():
     model = paci_2018.PaciModel()
     trace = model.generate_response(
@@ -291,7 +291,8 @@ def plot_baseline_irregular_pacing_trace():
             stimulation_offsets=[0.6, 0.4, 1., 0.1, 0.2, 0.0, 0.8, 0.9]))
     trace.plot()
     trace.pacing_info.plot_peaks_and_apd_ends(trace=trace)
-    plt.savefig('figures/baseline_irregular_pacing_trace.png')
+    plt.savefig(
+        'figures/Irregular Pacing Figure/baseline_irregular_pacing_trace.svg')
 
 
 def plot_baseline_voltage_clamp_trace():
@@ -307,5 +308,6 @@ def plot_baseline_voltage_clamp_trace():
     trace = model.generate_response(
         protocol=protocols.VoltageClampProtocol(steps=steps))
     trace.plot_with_currents()
-    plt.savefig('figures/baseline_voltage_clamp_trace.png')
+    plt.savefig(
+        'figures/Voltage Protocol Figure/baseline_voltage_clamp_trace.svg')
 
