@@ -93,20 +93,20 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     step_duration_bounds=(0.05, 0.6),
     step_voltage_bounds=(-.12, .06),
     target_currents=['I_Na', 'I_K1', 'I_To', 'I_CaL', 'I_Kr', 'I_Ks'],
-    population_size=2,
-    max_generations=2,
+    population_size=20,
+    max_generations=20,
     mate_probability=0.9,
     mutate_probability=0.9,
     gene_swap_probability=0.2,
     gene_mutation_probability=0.2,
-    tournament_size=2)
+    tournament_size=3)
 
 COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
     currents=[
         'I_Na', 'I_K1', 'I_To',
         'I_CaL', 'I_Kr', 'I_Ks',
     ],
-    step_range=range(2, 3, 1),
+    step_range=range(2, 7, 1),
     adequate_fitness_threshold=0.95,
     ga_config=VCO_CONFIG)
 
