@@ -34,13 +34,17 @@ IP_PROTOCOL = protocols.IrregularPacingProtocol(
         stimulation_offsets=[0.1])
 VC_PROTOCOL = protocols.VoltageClampProtocol(
     steps=[
-        protocols.VoltageClampStep(duration=0.1, voltage=-0.08),
-        protocols.VoltageClampStep(duration=0.1, voltage=-0.12),
-        protocols.VoltageClampStep(duration=0.5, voltage=-0.06),
-        protocols.VoltageClampStep(duration=0.05, voltage=-0.04),
-        protocols.VoltageClampStep(duration=0.15, voltage=0.02),
+        protocols.VoltageClampStep(duration=0.050, voltage=-0.08),
+        protocols.VoltageClampStep(duration=0.050, voltage=-0.12),
+        protocols.VoltageClampStep(duration=0.500, voltage=-0.057),
+        protocols.VoltageClampStep(duration=0.025, voltage=-0.04),
+        protocols.VoltageClampStep(duration=0.075, voltage=0.02),
         protocols.VoltageClampStep(duration=0.025, voltage=-0.08),
-        protocols.VoltageClampStep(duration=0.3, voltage=0.04),
+        protocols.VoltageClampStep(duration=0.250, voltage=0.04),
+        protocols.VoltageClampStep(duration=1.900, voltage=-0.03),
+        protocols.VoltageClampStep(duration=0.750, voltage=0.04),
+        protocols.VoltageClampStep(duration=1.725, voltage=-0.03),
+        protocols.VoltageClampStep(duration=0.650, voltage=-0.08),
     ]
 )
 
@@ -58,17 +62,30 @@ SAP_CONFIG = ga_configs.ParameterTuningConfig(
     tournament_size=4)
 
 IP_CONFIG = ga_configs.ParameterTuningConfig(
-    population_size=2,
-    max_generations=2,
+    population_size=10,
+    max_generations=10,
     protocol=IP_PROTOCOL,
     tunable_parameters=PARAMETERS,
-    params_lower_bound=0.5,
-    params_upper_bound=1.5,
+    params_lower_bound=0.1,
+    params_upper_bound=3,
     mate_probability=0.9,
-    mutate_probability=1.0,
-    gene_swap_probability=0.5,
-    gene_mutation_probability=0.1,
-    tournament_size=2)
+    mutate_probability=0.9,
+    gene_swap_probability=0.2,
+    gene_mutation_probability=0.2,
+    tournament_size=4)
+
+VC_CONFIG = ga_configs.ParameterTuningConfig(
+    population_size=10,
+    max_generations=10,
+    protocol=VC_PROTOCOL,
+    tunable_parameters=PARAMETERS,
+    params_lower_bound=0.1,
+    params_upper_bound=3,
+    mate_probability=0.9,
+    mutate_probability=0.9,
+    gene_swap_probability=0.2,
+    gene_mutation_probability=0.2,
+    tournament_size=4)
 
 VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     contribution_step=100,
@@ -97,8 +114,9 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 def main():
     start_time = time.time()
 
-    parameter_tuning_experiments.run_param_tuning_experiment(
-        config=SAP_CONFIG, with_output=True)
+    voltage_clamp_optimization_experiments.construct_optimal_protocol(
+        vc_protocol_optimization_config=COMBINED_VC_CONFIG,
+        with_output=True)
 
     elapsed_time = time.time() - start_time
     print('Runtime: {}'.format(elapsed_time))

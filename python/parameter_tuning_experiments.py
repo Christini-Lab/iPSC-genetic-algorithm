@@ -5,6 +5,7 @@ Use the functions in this module in the main.py module.
 import collections
 import random
 from typing import Dict, List, Union
+import sys
 
 from matplotlib import pyplot as plt
 import numpy as np
@@ -32,12 +33,27 @@ PROTOCOL_TITLES = {
 COMBINED_TITLE = 'Combined Protocol'
 
 
+def get_lowest_fitness_overall(
+        result: genetic_algorithm_results.GeneticAlgorithmResult
+) -> genetic_algorithm_results.ParameterTuningIndividual:
+    """Gets the lowest fitness individual across all generations."""
+    lowest_fitness = sys.maxsize
+    lowest_fitness_individual = None
+    for i in range(len(result.generations)):
+        curr_individual = result.get_low_fitness_individual(generation=i)
+        if curr_individual.fitness < lowest_fitness:
+            lowest_fitness = curr_individual.fitness
+            lowest_fitness_individual = curr_individual
+    return lowest_fitness_individual
+
+
 def _graph_error_over_generation(result, color, label):
     """Graphs the change in error over generations."""
     best_individual_errors = []
 
     for i in range(len(result.generations)):
-        best_individual_errors.append(result.get_high_fitness_individual(i).fitness)
+        best_individual_errors.append(
+            result.get_low_fitness_individual(i).fitness)
 
     best_individual_error_line, = plt.plot(
         range(len(result.generations)),
@@ -98,7 +114,7 @@ def generate_parameter_scaling_figure(
         temp_examples = []
         tunable_params = val[0].config.tunable_parameters
         for result in val:
-            best_individual = result.get_high_fitness_individual(
+            best_individual = result.get_low_fitness_individual(
                 result.config.max_generations - 1)
             temp_examples.append(result.get_parameter_scales(best_individual))
         examples.extend(_make_parameter_scaling_examples(
@@ -154,8 +170,7 @@ def _generate_error_strip_plot_data_frame(
     protocol_types = []
     for key, val in results.items():
         for result in val:
-            best_individual = result.get_high_fitness_individual(
-                generation=result.config.max_generations - 1)
+            best_individual = get_lowest_fitness_overall(result=result)
             errors.append(best_individual.fitness)
             protocol_types.append(key)
     return pd.DataFrame(
