@@ -22,9 +22,10 @@ class IrregularPacingInfo:
     """
 
     _STIMULATION_DURATION = 0.005
-    _PEAK_DETECTION_THRESHOLD = 0.025
+    _PEAK_DETECTION_THRESHOLD = 0.0
     _MIN_VOLT_DIFF = 0.00001
-    _PEAK_MIN_DIS = 1.5
+    # TODO Changed peak min distance to find peaks next to each other.
+    _PEAK_MIN_DIS = 0.0001
     AVG_AP_START_VOLTAGE = -0.075
 
     def __init__(self) -> None:

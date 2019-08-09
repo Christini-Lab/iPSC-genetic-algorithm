@@ -326,3 +326,33 @@ def plot_baseline_voltage_clamp_trace():
     plt.savefig(
         'figures/Voltage Protocol Figure/baseline_voltage_clamp_trace.svg')
 
+
+def generate_restitution_curve():
+    max_pacing_rate = 1.1
+    model = paci_2018.PaciModel()
+    cycle_lengths = []
+    pacing_rates = np.arange(0.1, max_pacing_rate, 0.1)
+    for i in pacing_rates:
+        print('Generating trace at pacing rate: {}'.format(i))
+        stimulation_count = 8
+        curr_trace = model.generate_response(
+            protocol=protocols.IrregularPacingProtocol(
+                duration=20,
+                stimulation_offsets=[i for _ in range(stimulation_count)]))
+
+        plt.figure()
+        curr_trace.plot()
+        curr_trace.pacing_info.plot_peaks_and_apd_ends(trace=curr_trace)
+        plt.savefig('figures/Restitution Curve/{}_PacingRate.svg'.format(i))
+
+        relevant_peaks = curr_trace.pacing_info.peaks[1:1+stimulation_count]
+        curr_cycle_lengths = []
+        for j in range(1, len(relevant_peaks)):
+            curr_cycle_lengths.append(relevant_peaks[j] - relevant_peaks[j-1])
+
+        print('Curr cycle lengths: {}'.format(curr_cycle_lengths))
+        cycle_lengths.append(np.array(curr_cycle_lengths).mean())
+
+    plt.figure()
+    plt.plot(pacing_rates, cycle_lengths)
+    plt.savefig('figures/Restitution Curve/Restitution Curve.svg')

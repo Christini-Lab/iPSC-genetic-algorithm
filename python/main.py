@@ -93,8 +93,8 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     step_duration_bounds=(0.05, 0.6),
     step_voltage_bounds=(-.12, .06),
     target_currents=['I_Na', 'I_K1', 'I_To', 'I_CaL', 'I_Kr', 'I_Ks'],
-    population_size=20,
-    max_generations=20,
+    population_size=4,
+    max_generations=4,
     mate_probability=0.9,
     mutate_probability=0.9,
     gene_swap_probability=0.2,
@@ -106,7 +106,7 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
         'I_Na', 'I_K1', 'I_To',
         'I_CaL', 'I_Kr', 'I_Ks',
     ],
-    step_range=range(2, 7, 1),
+    step_range=range(5, 6, 1),
     adequate_fitness_threshold=0.95,
     ga_config=VCO_CONFIG)
 
@@ -114,9 +114,7 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 def main():
     start_time = time.time()
 
-    voltage_clamp_optimization_experiments.construct_optimal_protocol(
-        vc_protocol_optimization_config=COMBINED_VC_CONFIG,
-        with_output=True)
+    parameter_tuning_experiments.generate_restitution_curve()
 
     elapsed_time = time.time() - start_time
     print('Runtime: {}'.format(elapsed_time))
