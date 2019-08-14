@@ -320,7 +320,8 @@ class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
         ax.axhline(linewidth=4, color='black')
         ax.axvline(linewidth=4, color='black')
         ax.collections[0].colorbar.set_label('Fitness')
-        plt.savefig('figures/heatmap.png')
+        plt.savefig('figures/Voltage Clamp Figure/Single VC Optimization/'
+                    'heatmap.svg')
 
     def graph_fitness_over_generation(self, with_scatter=False):
         """Graphs the change in error over generations."""
@@ -349,7 +350,8 @@ class GAResultVoltageClampOptimization(GeneticAlgorithmResult):
         plt.xlabel('Generation', **hfont)
         plt.ylabel('Individual', **hfont)
         plt.legend(handles=[mean_fitness_line, best_individual_fitness_line])
-        plt.savefig('figures/fitness_over_generation.png')
+        plt.savefig('figures/Voltage Clamp Figure/Single VC Optimization/'
+                    'fitness_over_generation.svg')
 
 
 def graph_vc_protocol(protocol: protocols.VoltageClampProtocol,
@@ -359,7 +361,8 @@ def graph_vc_protocol(protocol: protocols.VoltageClampProtocol,
     i_trace = paci_2018.generate_trace(protocol=protocol)
     if i_trace:
         i_trace.plot_with_currents()
-        plt.savefig('figures/{}.png'.format(title))
+        plt.savefig('figures/Voltage Clamp Figure/Single VC Optimization/'
+                    '{}.svg'.format(title))
     else:
         print('Could not generate individual trace for individual: {}.'.format(
             protocol))
@@ -374,7 +377,8 @@ def graph_optimized_vc_protocol_full_figure(
     plt.figure(figsize=(20, 10))
     i_trace = paci_2018.generate_trace(protocol=combined_protocol)
     i_trace.plot_with_currents(title='')
-    plt.savefig('figures/Full VC Optimization Figure/Combined trace.svg')
+    plt.savefig('figures/Voltage Clamp Figure/Full VC Optimization/Combined '
+                'trace.svg')
 
     # Plot single current traces.
     i = 1
@@ -385,21 +389,21 @@ def graph_optimized_vc_protocol_full_figure(
         i_trace.plot_with_currents(title=r'$I_{{{}}}$'.format(key[2:]))
         i += 1
         plt.savefig(
-            'figures/Full VC Optimization Figure/'
+            'figures/Voltage Clamp Figure/Full VC Optimization/'
             '{} single current trace.svg'.format(key))
 
     # Plot current contributions for combined trace.
     graph_combined_current_contributions(
         protocol=combined_protocol,
         config=config,
-        title='Combined current contributions'
+        title='Full VC Optimization/Combined current contributions'
     )
 
     # Plot single current max contributions.
     graph_single_current_contributions(
         single_current_protocols=single_current_protocols,
         config=config,
-        title='Single current contributions')
+        title='Full VC Optimization/Single current contributions')
 
 
 def graph_single_current_contributions(
@@ -462,7 +466,7 @@ def graph_current_contributions_helper(currents, contributions, title):
     ax.set_xticklabels(ax.get_xticklabels(), rotation=-30)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    plt.savefig('figures/Full VC Optimization Figure/{}.svg'.format(title))
+    plt.savefig('figures/Voltage Clamp Figure/{}.svg'.format(title))
 
 
 class Individual:

@@ -48,13 +48,14 @@ def run_voltage_clamp_experiment(
         genetic_algorithm_results.graph_combined_current_contributions(
             protocol=best_end.protocol,
             config=result.config,
-            title='Best individual currents, generation {}'.format(
-                config.max_generations - 1))
+            title='Single VC Optimization/Best individual currents, generation'
+                  ' {}'.format(config.max_generations - 1))
 
         genetic_algorithm_results.graph_combined_current_contributions(
             protocol=best_all_around.protocol,
             config=result.config,
-            title='Best individual currents, all generations')
+            title='Single VC Optimization/Best individual currents, all'
+                  ' generations')
 
         genetic_algorithm_results.graph_vc_protocol(
             protocol=random_0.protocol,
@@ -105,8 +106,7 @@ def construct_optimal_protocol(
         genetic_algorithm_results.graph_optimized_vc_protocol_full_figure(
             single_current_protocols=optimal_protocols,
             combined_protocol=optimal_protocol,
-            config=vc_protocol_optimization_config.ga_config,
-        )
+            config=vc_protocol_optimization_config.ga_config)
     return optimal_protocol
 
 

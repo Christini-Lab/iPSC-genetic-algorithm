@@ -185,20 +185,6 @@ class CurrentResponseInfo:
 
         return current
 
-    def get_single_current_values(self, current_name: str) -> List[float]:
-        # Find the index of the specified current.
-        for i in range(len(self.currents[0])):
-            if self.currents[0][i].name == current_name:
-                current_index = i
-                break
-        else:
-            raise ValueError('Current {} is not found.'.format(current_name))
-
-        values = []
-        for current in self.currents:
-            values.append(current[current_index].value)
-        return values
-
 
 def _find_trace_y_values(trace, timings):
     """Given a trace, finds the y values of the timings provided."""
