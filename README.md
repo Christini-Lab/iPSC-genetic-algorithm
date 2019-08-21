@@ -1,24 +1,24 @@
 # iPSC-genetic-algorithm
 
-The repository contains python code to do two things: parameter estimation via a genetic algorithm and voltage clamp protocol construction via genetic algorithm.  
+This repository contains python code to do two things: parameter estimation via a genetic algorithm and voltage clamp protocol construction via a genetic algorithm.  
 
 ## Parameter Estimation
 
 ### Purpose
-A cardiac cell model has several conductance parameters, which are real-valued numbers. These conductance parameters impact the output of the cell model, namely the action potential. Different cells have different parameter values, so our goal is to estimate what these parameters are from in vivo data.
+A cardiac cell model has several conductance parameters, which are real-valued numbers. These conductance parameters impact the output of the cell model, namely the action potential. Different cells have different parameter values, so our goal is to estimate what these parameters are from _in vivo_ data.
 
-Before we use in vivo data, however, it is helpful to validate the parameter estimation approach. We do this by trying to configure model parameters to reproduce default model output. See this [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004242) for more details.
+Before we use _in vivo_ data, however, it is helpful to validate the parameter estimation approach. We do this by trying to configure model parameters to reproduce default model output. See this [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004242) for more details.
 
 ### Types of model outputs
-There are three different model outputs we use during parameter estimation:
+There are three different model outputs we use for parameter estimation:
 1. A single action potential.
 2. Model output when a irregular pacing protocol is applied. 
 3. Current output when a voltage clamp protocol is applied.
 
 ### How to run
-To run a genetic algorithm for parameter estimation using any of the three model outputs, make the following changes in `main.py`.
+To run a genetic algorithm for parameter estimation using any of the three model outputs, make the following changes to `main.py`.
 
-1. Define which parameters you want to estimate and add them to a list. Make sure the list is sorted alphabetically.
+1. Define which parameters you want to estimate and add them to a list. __Make sure the list is sorted alphabetically__.
 ```
 PARAMETERS = [
     ga_configs.Parameter(name='G_Na', default_value=3671.2302),
@@ -32,8 +32,6 @@ PARAMETERS = [
     ga_configs.Parameter(name='G_pCa', default_value=0.4125),
     ga_configs.Parameter(name='G_bCa', default_value=0.727272),
 ]
-# Parameters are sorted alphabetically to maintain order during each
-# generation of the genetic algorithm.
 PARAMETERS.sort(key=lambda x: x.name)
 ```
 
@@ -59,7 +57,8 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
     ]
 )
 ```
-3. Create a genetic algorithm config object with your protocol. This is where you configure population and generation size, as well as other hyperparameters. The example shown is for a single action potential, but all three model outputs work the same way.
+
+3. Create a genetic algorithm config object with your protocol. This is where you configure population and generation size, as well as other GA hyperparameters. The example shown is for a single action potential, but all three model outputs work similarly.
 ```
 SAP_CONFIG = ga_configs.ParameterTuningConfig(
     population_size=40,
@@ -75,14 +74,14 @@ SAP_CONFIG = ga_configs.ParameterTuningConfig(
     tournament_size=4)
 ```
 
-4. Run the experiment by calling the `run_param_tuning_experiment` function.
+4. Run the experiment by calling the `run_param_tuning_experiment` function, which is in `parameter_tuning_experiments.py`.
 ```
 parameter_tuning_experiments.run_param_tuning_experiment(
         config=SAP_CONFIG,
         with_output=True)
 ```
 
-Together, with imports, your `main.py` should look like this (if using a SAP as model output).
+Together, including imports, your `main.py` should look like this (if using a SAP as model output).
 ```
 import parameter_tuning_experiments
 import protocols
@@ -134,14 +133,14 @@ if __name__ == '__main__':
 ## Voltage Clamp Protocol Construction
 
 ### Purpose
-One of the three model outputs we use for parameter estimation is model output when a voltage clamp protocol is applied. A voltage clamp protocol defines a series of voltage steps to hold a cell at in order to collect the current response. A good voltage clamp protocol is able to isolate individual currents over the course of the protocol, because this theoretically makes it a better target objective for the genetic algorithm.
+One of the three model outputs we use for parameter estimation is model output when a voltage clamp protocol is applied. A voltage clamp protocol defines a series of voltage steps to hold a cell at. A good voltage clamp protocol is able to isolate individual currents over the course of the protocol, because this theoretically creates a better target objective for the genetic algorithm.
 
-Typically, voltage clamp protocols are designed by hand by an expert with knowledge about currents. But, we can automate this process using a genetic algorithm and hopefully create voltage clamp protocols which are better those created by hand. 
+Typically, voltage clamp protocols are designed by hand by an expert with knowledge about currents. But, we can automate this process using a genetic algorithm and hopefully create voltage clamp protocols which are better than those created by hand. 
 
 ### How to run
 To run a genetic algorithm for voltage clamp construction, make the following changes in `main.py`.
 
-1. Define a genetic algorithm config object. This is where population size, generation size, and other options are set.
+1. Define a genetic algorithm config object. This is where population size, generation size, and other GA hyperparameters are set.
 ```
 VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     window=0.1,
@@ -171,15 +170,14 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
     ga_config=VCO_CONFIG)
 ```
 
-3. Run the experiment by calling the `construct_optimal_protocol` function.
+3. Run the experiment by calling the `construct_optimal_protocol` function, which is in `voltage_clamp_optimization_experiments.py`.
 ```
 voltage_clamp_optimization_experiments.construct_optimal_protocol(
         vc_protocol_optimization_config=COMBINED_VC_CONFIG,
         with_output=True)
 ```
 
-Together, with imports, your `main.py` should look like this.
-
+Together, including imports, your `main.py` should look like this.
 ```
 import ga_configs
 import voltage_clamp_optimization_experiments
