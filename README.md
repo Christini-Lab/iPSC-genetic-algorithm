@@ -4,16 +4,18 @@ The repository contains python code to do two things: parameter estimation via a
 
 ## Parameter Estimation
 
-### Purpose 
+### Purpose
 A cardiac cell model has several conductance parameters, which are real-valued numbers. These conductance parameters impact the output of the cell model, namely the action potential. Different cells have different parameter values, so our goal is to estimate what these parameters are from in vivo data.
 
 Before we use in vivo data, however, it is helpful to validate the parameter estimation approach. We do this by trying to configure model parameters to reproduce default model output. See this [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004242) for more details.
 
+### Types of model outputs
 There are three different model outputs we use during parameter estimation:
 1. A single action potential.
 2. Model output when a irregular pacing protocol is applied. 
 3. Current output when a voltage clamp protocol is applied.
 
+### How to run
 To run a genetic algorithm for parameter estimation using any of the three model outputs, make the following changes in `main.py`.
 
 1. Define which parameters you want to estimate and add them to a list. Make sure the list is sorted alphabetically.
@@ -80,7 +82,7 @@ parameter_tuning_experiments.run_param_tuning_experiment(
         with_output=True)
 ```
 
-5. Together, with imports, your `main.py` should look like this (if using a SAP as model output).
+Together, with imports, your `main.py` should look like this (if using a SAP as model output).
 ```
 import parameter_tuning_experiments
 import protocols
@@ -129,4 +131,91 @@ if __name__ == '__main__':
     main()
 ```
 
+## Voltage Clamp Protocol Construction
 
+### Purpose
+One of the three model outputs we use for parameter estimation is model output when a voltage clamp protocol is applied. A voltage clamp protocol defines a series of voltage steps to hold a cell at in order to collect the current response. A good voltage clamp protocol is able to isolate individual currents over the course of the protocol, because this theoretically makes it a better target objective for the genetic algorithm.
+
+Typically, voltage clamp protocols are designed by hand by an expert with knowledge about currents. But, we can automate this process using a genetic algorithm and hopefully create voltage clamp protocols which are better those created by hand. 
+
+### How to run
+To run a genetic algorithm for voltage clamp construction, make the following changes in `main.py`.
+
+1. Define a genetic algorithm config object. This is where population size, generation size, and other options are set.
+```
+VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
+    window=0.1,
+    step_size=0.05,
+    steps_in_protocol=8,
+    step_duration_bounds=(0.05, 0.6),
+    step_voltage_bounds=(-.12, .06),
+    target_currents=['I_Na', 'I_K1', 'I_To', 'I_CaL', 'I_Kr', 'I_Ks'],
+    population_size=4,
+    max_generations=4,
+    mate_probability=0.9,
+    mutate_probability=0.9,
+    gene_swap_probability=0.2,
+    gene_mutation_probability=0.2,
+    tournament_size=2)
+```
+
+2. Define a combined voltage clamp optimization object. The reason we create this object is because we are actually running multiple genetic algorithms and then stitching the results we get together. You can read about each attribute in detail in comments in the code.
+```
+COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
+    currents=[
+        'I_Na', 'I_K1', 'I_To',
+        'I_CaL', 'I_Kr', 'I_Ks',
+    ],
+    step_range=range(5, 6, 1),
+    adequate_fitness_threshold=0.95,
+    ga_config=VCO_CONFIG)
+```
+
+3. Run the experiment by calling the `construct_optimal_protocol` function.
+```
+voltage_clamp_optimization_experiments.construct_optimal_protocol(
+        vc_protocol_optimization_config=COMBINED_VC_CONFIG,
+        with_output=True)
+```
+
+Together, with imports, your `main.py` should look like this.
+
+```
+import ga_configs
+import voltage_clamp_optimization_experiments
+
+
+VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
+    window=0.1,
+    step_size=0.05,
+    steps_in_protocol=8,
+    step_duration_bounds=(0.05, 0.6),
+    step_voltage_bounds=(-.12, .06),
+    target_currents=['I_Na', 'I_K1', 'I_To', 'I_CaL', 'I_Kr', 'I_Ks'],
+    population_size=4,
+    max_generations=4,
+    mate_probability=0.9,
+    mutate_probability=0.9,
+    gene_swap_probability=0.2,
+    gene_mutation_probability=0.2,
+    tournament_size=2)
+
+COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
+    currents=[
+        'I_Na', 'I_K1', 'I_To',
+        'I_CaL', 'I_Kr', 'I_Ks',
+    ],
+    step_range=range(5, 6, 1),
+    adequate_fitness_threshold=0.95,
+    ga_config=VCO_CONFIG)
+
+
+def main():
+    voltage_clamp_optimization_experiments.construct_optimal_protocol(
+        vc_protocol_optimization_config=COMBINED_VC_CONFIG,
+        with_output=True)
+
+
+if __name__ == '__main__':
+    main()
+```
