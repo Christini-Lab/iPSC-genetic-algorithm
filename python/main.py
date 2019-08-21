@@ -88,7 +88,8 @@ VC_CONFIG = ga_configs.ParameterTuningConfig(
     tournament_size=4)
 
 VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
-    contribution_step=100,
+    window=0.1,
+    step_size=0.05,
     steps_in_protocol=8,
     step_duration_bounds=(0.05, 0.6),
     step_voltage_bounds=(-.12, .06),
@@ -99,7 +100,7 @@ VCO_CONFIG = ga_configs.VoltageOptimizationConfig(
     mutate_probability=0.9,
     gene_swap_probability=0.2,
     gene_mutation_probability=0.2,
-    tournament_size=3)
+    tournament_size=2)
 
 COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
     currents=[

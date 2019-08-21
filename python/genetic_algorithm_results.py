@@ -368,12 +368,20 @@ def graph_vc_protocol(protocol: protocols.VoltageClampProtocol,
             protocol))
 
 
+def test_plot(protocol):
+    i_trace = paci_2018.generate_trace(protocol=protocol)
+    i_trace.plot_with_currents(title='Hey')
+    plt.show()
+
+
 def graph_optimized_vc_protocol_full_figure(
         single_current_protocols: Dict[str, protocols.VoltageClampProtocol],
         combined_protocol: protocols.VoltageClampProtocol,
         config: ga_configs.VoltageOptimizationConfig) -> None:
     """Graphs a full figure for a optimized voltage protocol."""
     # Plot combined trace.
+    test_plot(protocol=combined_protocol)
+
     plt.figure(figsize=(20, 10))
     i_trace = paci_2018.generate_trace(protocol=combined_protocol)
     i_trace.plot_with_currents(title='')
@@ -414,10 +422,14 @@ def graph_single_current_contributions(
     single_current_max_contributions = {}
     for key, value in single_current_protocols.items():
         i_trace = paci_2018.generate_trace(protocol=value)
-        new_config = copy.deepcopy(config)
-        new_config.target_currents = [key]
-        single_current_max_contributions[key] = _calc_fitness_score(
-            get_contributions(i_trace=i_trace, config=new_config))
+
+        max_contributions = i_trace.current_response_info.\
+            get_max_current_contributions(
+                time=i_trace.t,
+                window=config.window,
+                step_size=config.step_size)
+        single_current_max_contributions[key] = max_contributions[
+            max_contributions['Current'] == key]['Contribution']
 
     graph_current_contributions_helper(
         currents=single_current_max_contributions.keys(),
@@ -431,17 +443,15 @@ def graph_combined_current_contributions(
         title: str) -> None:
     """Graphs the max current contributions for a single protocol."""
     i_trace = paci_2018.generate_trace(protocol=protocol)
-    max_contributions = get_max_contributions(
-        get_contributions(i_trace=i_trace, config=config))
-    currents = []
-    contributions = []
-    max_contrib_dict = max_contributions.to_dict()['Max Percent Contribution']
-    for key, val in max_contrib_dict.items():
-        currents.append(key)
-        contributions.append(val)
+    max_contributions = i_trace.current_response_info.\
+        get_max_current_contributions(
+            time=i_trace.t,
+            window=config.window,
+            step_size=config.step_size)
+
     graph_current_contributions_helper(
-        currents=currents,
-        contributions=contributions,
+        currents=list(max_contributions['Current']),
+        contributions=list(max_contributions['Contribution']),
         title=title)
 
 
@@ -543,39 +553,10 @@ class VCOptimizationIndividual(Individual):
         if not i_trace:
             return 0
 
-        return _calc_fitness_score(
-            contributions=get_contributions(i_trace=i_trace, config=config))
+        max_contributions = i_trace.current_response_info.\
+            get_max_current_contributions(
+                time=i_trace.t,
+                window=config.window,
+                step_size=config.step_size)
+        return max_contributions['Contribution'].sum()
 
-
-def get_contributions(
-        i_trace: trace.Trace,
-        config: ga_configs.VoltageOptimizationConfig) -> List[pd.DataFrame]:
-    """Gets current contributions over windows of time."""
-    contributions = []
-    i = 0
-    while i + config.contribution_step < len(i_trace.t):
-        contributions.append(
-            i_trace.current_response_info.calculate_current_contribution(
-                timings=i_trace.t,
-                start_t=i_trace.t[i],
-                end_t=i_trace.t[i + config.contribution_step],
-                target_currents=config.target_currents))
-        i += config.contribution_step
-    return contributions
-
-
-def get_max_contributions(contributions: List[pd.DataFrame]) -> pd.DataFrame:
-    """Gets the max contributions for each current."""
-    combined_current_contributions = pd.concat(contributions)
-    max_contributions = combined_current_contributions.groupby(
-        ['Parameter']).max()
-    return max_contributions
-
-
-def _calc_fitness_score(contributions: List[pd.DataFrame]) -> int:
-    """Calculates the fitness score based on contribution time steps.
-
-    Sums the max contributions for each parameter.
-    """
-    return get_max_contributions(
-        contributions=contributions)['Max Percent Contribution'].sum()

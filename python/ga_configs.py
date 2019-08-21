@@ -144,8 +144,10 @@ class VoltageOptimizationConfig(GeneticAlgorithmConfig):
     """Config for a voltage optimization genetic algorithm.
 
     Attributes:
-        contribution_step: Calculates fraction contribution of each channel
-            over `contribution_step` time points.
+        window: Window of time over which the fraction contribution
+            of each channel is calculated.
+        step_size: Step size when calculating windows over which the fraction
+            contribution of each channel is calculated.
         steps_in_protocol: Locked number of steps in a generated voltage clamp
             protocol.
         step_duration_bounds: The bounds from which the duration of a step can
@@ -155,7 +157,8 @@ class VoltageOptimizationConfig(GeneticAlgorithmConfig):
     """
 
     def __init__(self,
-                 contribution_step: int,
+                 window: float,
+                 step_size: float,
                  steps_in_protocol: int,
                  step_duration_bounds: Tuple[float, float],
                  step_voltage_bounds: Tuple[float, float],
@@ -175,7 +178,8 @@ class VoltageOptimizationConfig(GeneticAlgorithmConfig):
             gene_swap_probability=gene_swap_probability,
             gene_mutation_probability=gene_mutation_probability,
             tournament_size=tournament_size)
-        self.contribution_step = contribution_step
+        self.window = window
+        self.step_size = step_size
         self.steps_in_protocol = steps_in_protocol
         self.step_duration_bounds = step_duration_bounds
         self.step_voltage_bounds = step_voltage_bounds

@@ -11,7 +11,8 @@ class TestVoltageClampOptimizationExperiments(unittest.TestCase):
 
     def setUp(self):
         vc_ga_config = ga_configs.VoltageOptimizationConfig(
-            contribution_step=100,
+            window=100,
+            step_size=1,
             steps_in_protocol=6,
             step_duration_bounds=(0.1, 2.0),
             step_voltage_bounds=(-1.2, 0.6),
@@ -63,7 +64,8 @@ class TestVoltageClampOptimizationExperiments(unittest.TestCase):
 
     def test_construct_optimal_protocol_returns_successfully_fixed_steps(self):
         vc_ga_config = ga_configs.VoltageOptimizationConfig(
-            contribution_step=100,
+            window=100,
+            step_size=1,
             steps_in_protocol=-1,  # Will be set later
             step_duration_bounds=(0.05, 0.6),
             step_voltage_bounds=(-.12, .06),
@@ -98,7 +100,8 @@ class TestVoltageClampOptimizationExperiments(unittest.TestCase):
 
     def test_find_single_current_optimal_protocol_exceeds_threshold(self):
         vc_ga_config = ga_configs.VoltageOptimizationConfig(
-            contribution_step=100,
+            window=100,
+            step_size=1,
             steps_in_protocol=-1,  # Will be set later
             step_duration_bounds=(0.05, 0.6),
             step_voltage_bounds=(-.12, .06),
@@ -126,7 +129,8 @@ class TestVoltageClampOptimizationExperiments(unittest.TestCase):
 
     def test_find_single_current_optimal_protocol_below_threshold(self):
         vc_ga_config = ga_configs.VoltageOptimizationConfig(
-            contribution_step=100,
+            window=100,
+            step_size=1,
             steps_in_protocol=-1,  # Will be set later
             step_duration_bounds=(0.05, 0.6),
             step_voltage_bounds=(-.12, .06),

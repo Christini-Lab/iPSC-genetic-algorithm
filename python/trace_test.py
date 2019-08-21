@@ -2,6 +2,7 @@ import unittest
 
 import pandas as pd
 
+import ga_configs
 import trace
 
 
@@ -68,7 +69,7 @@ class TraceTest(unittest.TestCase):
 
         detected_peak = pacing_info.detect_peak(
             t=[.1, .2, 3],
-            y_voltage=0.01,
+            y_voltage=-0.01,
             d_y_voltage=[1.5, -1.5])
 
         self.assertFalse(detected_peak)
@@ -107,56 +108,50 @@ class TraceTest(unittest.TestCase):
 
         self.assertTrue(detected_apd90)
 
-    def test_find_trace_y_values(self):
-        trace_t = [0.5, 1., 1.3, 1.5]
-        trace_y = [10, 20, 25, 30]
-        trace_fake = TraceFake(t=trace_t, y=trace_y)
-        timings = [0.6, 1.1, 1.7]
-
-        y_values = trace._find_trace_y_values(trace_fake, timings)
-        expected_y_values = [10, 20, 30]
-
-        self.assertListEqual(y_values, expected_y_values)
-
-    def test_find_closest_t_index(self):
-        array = [1, 6, 9]
-        t = 7.1
-
-        index = trace._find_closest_t_index(array, t)
-        expected_index = 1
-
-        self.assertEqual(index, expected_index)
-
     def test_calculate_current_contribution(self):
-        _ = self  # To remove pycharm warning about static test.
-        currents = [
-            [
-                trace.Current(name='i_na', value=15),
-                trace.Current(name='i_ca', value=10),
-            ],
-            [
-                trace.Current(name='i_na', value=20),
-                trace.Current(name='i_ca', value=-5),
-            ],
-        ]
-        # Protocol is not needed for this test.
+        _ = self  # Silence pycharm warning.
         current_response_info = trace.CurrentResponseInfo(protocol=None)
-        current_response_info.currents = currents
-        timings = [0., 1.]
-        start_t = 0.
-        end_t = 1.
+        current_response_info.currents.append(
+            [trace.Current(name='I_Na', value=1.0),
+             trace.Current(name='I_Ca', value=2.0)])
+        current_response_info.currents.append(
+            [trace.Current(name='I_Na', value=3.0),
+             trace.Current(name='I_Ca', value=-4.0)])
+        current_response_info.currents.append(
+            [trace.Current(name='I_Na', value=2.0),
+             trace.Current(name='I_Ca', value=-6.0)])
+        current_response_info.currents.append(
+            [trace.Current(name='I_Na', value=5.0),
+             trace.Current(name='I_Ca', value=-2.0)])
+        current_response_info.currents.append(
+            [trace.Current(name='I_Na', value=2.0),
+             trace.Current(name='I_Ca', value=12.0)])
+        current_response_info.currents.append(
+            [trace.Current(name='I_Na', value=2.0),
+             trace.Current(name='I_Ca', value=12.0)])
+        current_response_info.currents.append(
+            [trace.Current(name='I_Na', value=15.0),
+             trace.Current(name='I_Ca', value=3.0)])
+        test_trace = trace.Trace(
+            t=[i for i in range(7)],
+            y=[5 for _ in range(7)],
+            current_response_info=current_response_info)
 
-        curr_contrib = current_response_info.calculate_current_contribution(
-            timings=timings,
-            start_t=start_t,
-            end_t=end_t)
+        contribs = test_trace.current_response_info.get_current_contributions(
+            time=test_trace.t,
+            window=2.0,
+            step_size=1.0)
 
-        expected_curr_contrib = pd.DataFrame(
-            data={'Parameter': ['i_na', 'i_ca'],
-                  'Max Percent Contribution': [0.7, 0.3]}
-        )
+        expected_contribs = pd.DataFrame(data={
+            'Time Start': [0.0, 1.0, 2.0, 3.0, 4.0],
+            'Time End': [2.0, 3.0, 4.0, 5.0, 6.0],
+            'I_Na': [0.333, 0.454, 0.310, 0.257, 0.413],
+            'I_Ca': [0.666, 0.545, 0.689, 0.742, 0.586]})
 
-        pd.testing.assert_frame_equal(curr_contrib, expected_curr_contrib)
+        pd.testing.assert_frame_equal(
+            contribs,
+            expected_contribs,
+            check_less_precise=2)
 
 
 if __name__ == '__main__':

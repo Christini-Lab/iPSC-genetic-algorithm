@@ -1,5 +1,5 @@
 """Contains three classes containing information about a trace."""
-
+import collections
 from typing import List
 
 from matplotlib import pyplot as plt
@@ -100,6 +100,16 @@ class IrregularPacingInfo:
             self.apd_90_end_voltage - y_voltage) < 0.001
 
 
+def _find_trace_y_values(trace, timings):
+    """Given a trace, finds the y values of the timings provided."""
+    y_values = []
+    for i in timings:
+        array = np.asarray(trace.t)
+        index = find_closest_index(array, i)
+        y_values.append(trace.y[index])
+    return y_values
+
+
 class Current:
     """Encapsulates a current at a single time step."""
 
@@ -128,50 +138,6 @@ class CurrentResponseInfo:
         self.protocol = protocol
         self.currents = []
 
-    def calculate_current_contribution(
-            self,
-            timings: List[float],
-            start_t: float,
-            end_t: float,
-            target_currents: List[str]=None) -> pd.DataFrame:
-        """Calculates the contribution of each current over a period of time."""
-        start_index = _find_closest_t_index(timings, start_t)
-        end_index = _find_closest_t_index(timings, end_t)
-
-        total_current_sum = 0
-        individual_sums = dict()
-        for i in range(start_index, end_index + 1, 1):
-            for j in self.currents[i]:
-                abs_j_value = abs(j.value)
-                total_current_sum += abs_j_value
-
-                # Only calculate current contributions of currents provided in
-                # target currents (if they were provided).
-                if target_currents and j.name not in target_currents:
-                    continue
-
-                if j.name in individual_sums:
-                    individual_sums[j.name] += abs_j_value
-                else:
-                    individual_sums[j.name] = abs_j_value
-
-        fraction_sums = dict()
-        for name, value in individual_sums.items():
-            fraction_sums[name] = value / total_current_sum
-
-        percent_contributions = []
-        parameter_names = []
-        for key, val in fraction_sums.items():
-            parameter_names.append(key)
-            percent_contributions.append(val)
-
-        df = pd.DataFrame(
-            data={'Parameter': parameter_names,
-                  'Max Percent Contribution': percent_contributions})
-        df['Max Percent Contribution'] = pd.to_numeric(
-            df['Max Percent Contribution'])
-        return df
-
     def get_current_summed(self):
         current = []
         for i in self.currents:
@@ -182,23 +148,126 @@ class CurrentResponseInfo:
         for i in range(len(current)):
             if abs(current[i] - median_current) > 0.1:
                 current[i] = 0
-
         return current
 
+    def get_max_current_contributions(self,
+                                      time: List[float],
+                                      window: float,
+                                      step_size: float) -> pd.DataFrame:
+        """Finds the max contribution given contributions of currents.
 
-def _find_trace_y_values(trace, timings):
-    """Given a trace, finds the y values of the timings provided."""
-    y_values = []
-    for i in timings:
-        array = np.asarray(trace.t)
-        index = _find_closest_t_index(array, i)
-        y_values.append(trace.y[index])
-    return y_values
+        Args:
+            time: The time stamps of the trace.
+            window: A window of time, in seconds, over which current
+                contributions are calculated. For example, if window was 1.0
+                seconds and the total trace was 10 seconds, 10 current
+                contributions would be recorded.
+            step_size: The time between windows. For example, if step_size was
+                equal to `window`, there would be no overlap when calculating
+                current contributions. The smaller the step size, the increased
+                computation required. Step size cannot be 0.
+
+        Returns:
+            A pd.DataFrame containing the max current contribution for each
+            current. Here is an example:
+
+            Index  Time Start  Time End  Contribution  Current
+
+            0      0.1         0.6       0.50          I_Na
+            1      0.2         0.7       0.98          I_K1
+            2      0.0         0.5       0.64          I_Kr
+        """
+        contributions = self.get_current_contributions(
+            time=time,
+            window=window,
+            step_size=step_size)
+        max_contributions = collections.defaultdict(list)
+        for i in list(contributions.columns.values):
+            if i in ('Time Start', 'Time End'):
+                continue
+            max_contrib_window = contributions.loc[contributions[i].idxmax()]
+            max_contributions['Current'].append(i)
+            max_contributions['Contribution'].append(max_contrib_window[i])
+            max_contributions['Time Start'].append(
+                max_contrib_window['Time Start'])
+            max_contributions['Time End'].append(max_contrib_window['Time End'])
+        return pd.DataFrame(data=max_contributions)
+
+    def get_current_contributions(self,
+                                  time: List[float],
+                                  window: float,
+                                  step_size: float) -> pd.DataFrame:
+        """Calculates each current contribution over a window of time.
+
+        Args:
+            time: The time stamps of the trace.
+            window: A window of time, in seconds, over which current
+                contributions are calculated. For example, if window was 1.0
+                seconds and the total trace was 10 seconds, 10 current
+                contributions would be recorded.
+            step_size: The time between windows. For example, if step_size was
+                equal to `window`, there would be no overlap when calculating
+                current contributions. The smaller the step size, the increased
+                computation required. Step size cannot be 0.
+
+        Returns:
+            A pd.DataFrame containing the fraction contribution of each current
+            at each window. Here is an example:
+
+            Index  Time Start  Time End  I_Na  I_K1  I_Kr
+
+            0      0.0         0.5       0.12  0.24  0.64
+            1      0.1         0.6       0.50  0.25  0.25
+            2      0.2         0.7       0.01  0.98  0.01
+            3      0.3         0.8       0.2   0.3   0.5
+        """
+        if not self.currents:
+            raise ValueError('No current response recorded.')
+
+        current_contributions = collections.defaultdict(list)
+        i = 0
+        while i <= time[-1] - window:
+            start_index = find_closest_index(time, i)
+            end_index = find_closest_index(time, i + window)
+            currents_in_window = self.currents[start_index: end_index + 1]
+            window_current_contributions = calculate_current_contributions(
+                currents=currents_in_window)
+
+            if window_current_contributions:
+                # Append results from current window to overall contributions
+                # dict.
+                current_contributions['Time Start'].append(i)
+                current_contributions['Time End'].append(i + window)
+
+                for key, val in window_current_contributions.items():
+                    current_contributions[key].append(val)
+            i += step_size
+
+        return pd.DataFrame(data=current_contributions)
 
 
-def _find_closest_t_index(array, t):
+def find_closest_index(array, t):
     """Given an array, return the index with the value closest to t."""
     return (np.abs(np.array(array) - t)).argmin()
+
+
+def calculate_current_contributions(currents: List[List[Current]]):
+    """Calculates the contributions of a list of a list current time steps."""
+    current_sums = {}
+    total_sum = 0
+    for time_steps in currents:
+        for current in time_steps:
+            if current.name in current_sums:
+                current_sums[current.name] += abs(current.value)
+            else:
+                current_sums[current.name] = abs(current.value)
+            total_sum += abs(current.value)
+
+    current_contributions = {}
+    for key, val in current_sums.items():
+        current_contributions[key] = val / total_sum
+
+    return current_contributions
 
 
 class Trace:

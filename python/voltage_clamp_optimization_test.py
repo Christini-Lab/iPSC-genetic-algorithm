@@ -13,7 +13,8 @@ class VoltageClampOptimizationTest(unittest.TestCase):
 
     def setUp(self):
         vc_ga_config = ga_configs.VoltageOptimizationConfig(
-            contribution_step=100,
+            window=100,
+            step_size=1,
             steps_in_protocol=6,
             step_duration_bounds=(0.1, 2.0),
             step_voltage_bounds=(-1.2, 0.6),

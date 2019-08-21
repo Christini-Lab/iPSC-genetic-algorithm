@@ -111,8 +111,7 @@ class PaciModel:
                     self.generate_single_action_potential_function(),
                     [0, protocol.duration],
                     self.y_initial,
-                    method='BDF',
-                    max_step=1e-3)
+                    method='BDF')
             except ValueError:
                 print('Model could not produce trace.')
                 return None
@@ -129,8 +128,7 @@ class PaciModel:
                         protocol, pacing_info),
                     [0, protocol.duration],
                     self.y_initial,
-                    method='BDF',
-                    max_step=1e-3)
+                    method='BDF')
             except ValueError:
                 return None
             return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
