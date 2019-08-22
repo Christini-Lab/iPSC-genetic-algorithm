@@ -112,9 +112,7 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 
 
 def main():
-    voltage_clamp_optimization_experiments.construct_optimal_protocol(
-        vc_protocol_optimization_config=COMBINED_VC_CONFIG,
-        with_output=True)
+    parameter_tuning_experiments.generate_restitution_curve()
 
 
 if __name__ == '__main__':

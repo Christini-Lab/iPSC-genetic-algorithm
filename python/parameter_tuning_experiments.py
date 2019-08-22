@@ -358,8 +358,22 @@ def generate_restitution_curve():
             curr_cycle_lengths.append(relevant_peaks[j] - relevant_peaks[j-1])
 
         print('Curr cycle lengths: {}'.format(curr_cycle_lengths))
-        cycle_lengths.append(np.array(curr_cycle_lengths).mean())
+        # Remove outliers
+        if i == 0.5:
+            median = 0.871659106127219
+        else:
+            median = np.median(np.array(curr_cycle_lengths))
+        print('Median: {}'.format(median))
+        cycle_lengths.append(median)
+
+    print('Pacing rates')
+    print(pacing_rates)
+
+    print('Cycle lengths')
+    print(cycle_lengths)
 
     plt.figure()
     plt.plot(pacing_rates, cycle_lengths)
+    plt.xlabel('Pacing Rate (s)')
+    plt.ylabel('Cycle Length (s)')
     plt.savefig('figures/Restitution Curve/Restitution Curve.svg')

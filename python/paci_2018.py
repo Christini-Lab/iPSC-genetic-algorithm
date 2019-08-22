@@ -128,7 +128,8 @@ class PaciModel:
                         protocol, pacing_info),
                     [0, protocol.duration],
                     self.y_initial,
-                    method='BDF')
+                    method='BDF',
+                    max_step=1e-3)
             except ValueError:
                 return None
             return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
