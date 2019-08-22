@@ -3,6 +3,7 @@
 Use the functions in this module in the main.py module.
 """
 import collections
+import os
 import random
 from typing import Dict, List, Union
 import sys
@@ -243,6 +244,12 @@ def run_param_tuning_experiment(
     ga_result = ga.run()
 
     if with_output:
+        # Create the appropriate directory, if one does not exist.
+        if not os.path.exists('figures'):
+            os.makedirs('figures')
+        if not os.path.exists('figures/Parameter Tuning Figure'):
+            os.makedirs('figures/Parameter Tuning Figure')
+
         ga_result.generate_heatmap()
         ga_result.graph_error_over_generation(with_scatter=False)
 

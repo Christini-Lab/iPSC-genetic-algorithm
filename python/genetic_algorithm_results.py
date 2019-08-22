@@ -368,20 +368,11 @@ def graph_vc_protocol(protocol: protocols.VoltageClampProtocol,
             protocol))
 
 
-def test_plot(protocol):
-    i_trace = paci_2018.generate_trace(protocol=protocol)
-    i_trace.plot_with_currents(title='Hey')
-    plt.show()
-
-
 def graph_optimized_vc_protocol_full_figure(
         single_current_protocols: Dict[str, protocols.VoltageClampProtocol],
         combined_protocol: protocols.VoltageClampProtocol,
         config: ga_configs.VoltageOptimizationConfig) -> None:
     """Graphs a full figure for a optimized voltage protocol."""
-    # Plot combined trace.
-    test_plot(protocol=combined_protocol)
-
     plt.figure(figsize=(20, 10))
     i_trace = paci_2018.generate_trace(protocol=combined_protocol)
     i_trace.plot_with_currents(title='')
@@ -429,7 +420,7 @@ def graph_single_current_contributions(
                 window=config.window,
                 step_size=config.step_size)
         single_current_max_contributions[key] = max_contributions[
-            max_contributions['Current'] == key]['Contribution']
+            max_contributions['Current'] == key]['Contribution'].values[0]
 
     graph_current_contributions_helper(
         currents=single_current_max_contributions.keys(),
@@ -452,19 +443,26 @@ def graph_combined_current_contributions(
     graph_current_contributions_helper(
         currents=list(max_contributions['Current']),
         contributions=list(max_contributions['Contribution']),
+        target_currents=config.target_currents,
         title=title)
 
 
-def graph_current_contributions_helper(currents, contributions, title):
+def graph_current_contributions_helper(currents,
+                                       contributions,
+                                       target_currents,
+                                       title):
     plt.figure()
     sns.set(style="white")
 
     # Sort currents according to alphabetic order.
     zipped_list = sorted(zip(currents, contributions))
-    contributions = [contrib for _, contrib in zipped_list]
-    currents = [curr for curr, _ in zipped_list]
+    contributions = [
+        contrib for curr, contrib in zipped_list if curr not in target_currents
+    ]
+    currents = [curr for curr, _ in zipped_list if curr not in target_currents]
 
     currents = ['$I_{{{}}}$'.format(i[2:]) for i in currents]
+
     ax = sns.barplot(
         x=currents,
         y=[i * 100 for i in contributions],

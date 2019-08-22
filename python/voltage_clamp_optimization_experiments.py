@@ -1,6 +1,7 @@
 """Contains functions to run VC optimization genetic algorithm experiments."""
 
 import copy
+import os
 from typing import List
 
 import ga_configs
@@ -103,6 +104,11 @@ def construct_optimal_protocol(
     optimal_protocol = combine_protocols(list(optimal_protocols.values()))
 
     if with_output:
+        # Create the appropriate directory, if one does not exist.
+        if not os.path.exists('figures/Voltage Clamp Figure/'
+                              'Full VC Optimization'):
+            os.makedirs('figures/Voltage Clamp Figure/Full VC Optimization')
+
         genetic_algorithm_results.graph_optimized_vc_protocol_full_figure(
             single_current_protocols=optimal_protocols,
             combined_protocol=optimal_protocol,

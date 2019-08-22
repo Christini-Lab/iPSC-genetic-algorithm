@@ -1,6 +1,5 @@
-"""Main driver for program.
-
-Use functions in parameter_tuning_experiments.py to run GAs."""
+"""Main driver for program. Before running, make sure to have a directory
+called `figures` for matplotlib pictures to be stored in."""
 
 import copy
 import time
@@ -49,8 +48,8 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
 )
 
 SAP_CONFIG = ga_configs.ParameterTuningConfig(
-    population_size=40,
-    max_generations=40,
+    population_size=4,
+    max_generations=4,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.1,
@@ -59,7 +58,7 @@ SAP_CONFIG = ga_configs.ParameterTuningConfig(
     mutate_probability=0.9,
     gene_swap_probability=0.2,
     gene_mutation_probability=0.2,
-    tournament_size=4)
+    tournament_size=2)
 
 IP_CONFIG = ga_configs.ParameterTuningConfig(
     population_size=10,
@@ -113,14 +112,9 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 
 
 def main():
-    start_time = time.time()
-
     voltage_clamp_optimization_experiments.construct_optimal_protocol(
         vc_protocol_optimization_config=COMBINED_VC_CONFIG,
         with_output=True)
-
-    elapsed_time = time.time() - start_time
-    print('Runtime: {}'.format(elapsed_time))
 
 
 if __name__ == '__main__':
