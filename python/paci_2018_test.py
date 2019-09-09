@@ -3,6 +3,7 @@ import paci_2018
 import protocols
 import numpy.testing as tst
 import ga_configs
+import pdb
 
 
 class TestPaci2018(unittest.TestCase):
@@ -18,20 +19,19 @@ class TestPaci2018(unittest.TestCase):
         self.assertTrue(max(baseline_trace.y)<.06, \
                 'baseline Paci max is greater than .06')
 
-
     def test_update_parameters(self):
         protocol = protocols.SingleActionPotentialProtocol()
         tunable_parameters = [
-               ga_configs.Parameter(name='g_na', default_value=3671.2302), 
-               ga_configs.Parameter(name='g_f_s', default_value=30.10312),
-               ga_configs.Parameter(name='g_ks_s', default_value=2.041),
-               ga_configs.Parameter(name='g_kr_s', default_value=29.8667),
-               ga_configs.Parameter(name='g_k1_s', default_value=28.1492),
-               ga_configs.Parameter(name='g_b_na', default_value=0.95),
-               ga_configs.Parameter(name='g_na_lmax', default_value=17.25),
-               ga_configs.Parameter(name='g_ca_l', default_value=8.635702e-5),
-               ga_configs.Parameter(name='g_p_ca', default_value=0.4125),
-               ga_configs.Parameter(name='g_b_ca', default_value=0.727272)]
+               ga_configs.Parameter(name='G_Na', default_value=3671.2302),
+               ga_configs.Parameter(name='G_F', default_value=30.10312),
+               ga_configs.Parameter(name='G_Ks', default_value=2.041),
+               ga_configs.Parameter(name='G_Kr', default_value=29.8667),
+               ga_configs.Parameter(name='G_K1', default_value=28.1492),
+               ga_configs.Parameter(name='G_bNa', default_value=0.95),
+               ga_configs.Parameter(name='G_NaL', default_value=17.25),
+               ga_configs.Parameter(name='G_CaL', default_value=8.635702e-5),
+               ga_configs.Parameter(name='G_pCa', default_value=0.4125),
+               ga_configs.Parameter(name='G_bCa', default_value=0.727272)]
         new_params = [3671.2,
                       30.1,
                       2.04,
@@ -51,6 +51,9 @@ class TestPaci2018(unittest.TestCase):
         tst.assert_raises(AssertionError, tst.assert_array_equal, \
                 baseline_trace.y, new_trace.y, \
                 'updating parameters does not change trace')
+
+    def test_no_ion_selective(self):
+
 
     def test_voltage_protocol(self):
         pass
