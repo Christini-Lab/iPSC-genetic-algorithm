@@ -22,6 +22,7 @@ PARAMETERS = [
     ga_configs.Parameter(name='G_CaL', default_value=8.635702e-5),
     ga_configs.Parameter(name='G_pCa', default_value=0.4125),
     ga_configs.Parameter(name='G_bCa', default_value=0.727272),
+    ga_configs.Parameter(name='K_NaCa', default_value=3917.0463)
 ]
 # Parameters are sorted alphabetically to maintain order during each
 # generation of the genetic algorithm.

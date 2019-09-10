@@ -53,7 +53,21 @@ class TestPaci2018(unittest.TestCase):
                 'updating parameters does not change trace')
 
     def test_no_ion_selective(self):
+        protocol = protocols.SingleActionPotentialProtocol()
+        paci_baseline = paci_2018.PaciModel()
+        paci_no_ion = paci_2018.PaciModel(no_ion_selective_dict= 
+                                          {'G_CaL': .4, 'K_NaCa': .4})
+        new_params = {'G_CaL': .4, 'K_NaCa': .4}
 
+        baseline_trace = paci_baseline.generate_response(protocol)
+        baseline_no_ion_trace = paci_no_ion.generate_response(protocol)
+
+
+        tst.assert_raises(AssertionError, tst.assert_array_equal,
+                          baseline_trace.y, baseline_no_ion_trace.y,
+                          'generate_no_ion_trace() does not update trace')
+
+    # TODO: no_ion_selective setter
 
     def test_voltage_protocol(self):
         pass

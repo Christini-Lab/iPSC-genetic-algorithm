@@ -72,16 +72,22 @@ class PaciModel:
     y_initial_zero = [-0.070, 0.32, 0.0002, 0, 0, 1, 1, 1, 0, 1, 0, 0.75, 0.75,
                       0, 0.1, 1, 0, 9.2, 0, 0.75, 0.3, 0.9, 0.1]
 
-    def __init__(self, updated_parameters=None):
+    def __init__(self, updated_parameters=None, no_ion_selective_dict=None):
         self.default_parameters = {'G_Na': 3671.2302, 'G_CaL': 8.635702e-5,
                                    'G_F': 30.10312, 'G_Ks': 2.041,
                                    'G_Kr': 29.8667, 'G_K1': 28.1492,
                                    'G_pCa': 0.4125, 'G_bNa': 0.95,
                                    'G_bCa': 0.727272,
-                                   'G_NaL': 17.25}
+                                   'G_NaL': 17.25, 'K_NaCa':3917.0463}
+        self.no_ion_selective = {}
+        self.is_no_ion_selective = False
 
         if updated_parameters:
             self.default_parameters.update(updated_parameters)
+        if no_ion_selective_dict:
+            self.no_ion_selective = no_ion_selective_dict
+            self.is_no_ion_selective = True 
+
         self.t = []
         self.y_voltage = []
         self.d_y_voltage = []
@@ -105,51 +111,13 @@ class PaciModel:
         self.full_y = []
 
         if isinstance(protocol, protocols.SingleActionPotentialProtocol):
-            self.current_response_info = trace.CurrentResponseInfo()
-            try:
-                integrate.solve_ivp(
-                    self.generate_single_action_potential_function(),
-                    [0, protocol.duration],
-                    self.y_initial,
-                    method='BDF')
-            except ValueError:
-                print('Model could not produce trace.')
-                return None
-            return trace.Trace(
-                self.t,
-                self.y_voltage,
-                current_response_info=self.current_response_info)
-
+            return self.generate_single_AP_response(protocol)
+ 
         elif isinstance(protocol, protocols.IrregularPacingProtocol):
-            pacing_info = trace.IrregularPacingInfo()
-            try:
-                integrate.solve_ivp(
-                    self.generate_irregular_pacing_function(
-                        protocol, pacing_info),
-                    [0, protocol.duration],
-                    self.y_initial,
-                    method='BDF',
-                    max_step=1e-3)
-            except ValueError:
-                return None
-            return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
+            return self.generate_irregular_pacing_response(protocol)
 
         elif isinstance(protocol, protocols.VoltageClampProtocol):
-            self.current_response_info = trace.CurrentResponseInfo(
-                protocol=protocol)
-            try:
-                integrate.solve_ivp(
-                    self.generate_voltage_clamp_function(protocol),
-                    [0, protocol.get_voltage_change_endpoints()[-1]],
-                    self.y_initial,
-                    method='BDF',
-                    max_step=1e-3)
-            except ValueError:
-                return None
-            return trace.Trace(
-                self.t,
-                self.y_voltage,
-                current_response_info=self.current_response_info)
+            return self.generate_VC_protocol_response(protocol)
 
     def generate_single_action_potential_function(self):
 
@@ -157,6 +125,72 @@ class PaciModel:
             return self.action_potential_diff_eq(t, y)
 
         return single_action_potential
+
+    def generate_single_AP_response(self, protocol):
+        """
+        Args:
+            protocol: An object of a specified protocol.
+
+        Returns:
+            A single action potential trace
+        """
+        self.current_response_info = trace.CurrentResponseInfo()
+        try:
+            integrate.solve_ivp(
+                self.generate_single_action_potential_function(),
+                [0, protocol.duration],
+                self.y_initial,
+                method='BDF')
+        except ValueError:
+            print('Model could not produce trace.')
+            return None
+        return trace.Trace(
+            self.t,
+            self.y_voltage,
+            current_response_info=self.current_response_info)
+
+    def generate_irregular_pacing_response(self, protocol): 
+        """
+        Args:
+            protocol: An irregular pacing protocol 
+        Returns:
+            A irregular pacing trace
+        """
+        pacing_info = trace.IrregularPacingInfo()
+        try:
+            integrate.solve_ivp(
+                self.generate_irregular_pacing_function(
+                    protocol, pacing_info),
+                [0, protocol.duration],
+                self.y_initial,
+                method='BDF',
+                max_step=1e-3)
+        except ValueError:
+            return None
+        return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
+
+    def generate_VC_protocol_response(self, protocol):
+        """
+        Args:
+            protocol: A voltage clamp protocol
+        Returns:
+            A Trace object for a voltage clamp protocol
+        """
+        self.current_response_info = trace.CurrentResponseInfo(
+                                     protocol=protocol)
+        try:
+            integrate.solve_ivp(
+                self.generate_voltage_clamp_function(protocol),
+                [0, protocol.get_voltage_change_endpoints()[-1]],
+                self.y_initial,
+                method='BDF',
+                max_step=1e-3)
+        except ValueError:
+            return None
+        return trace.Trace(
+                self.t,
+                self.y_voltage,
+                current_response_info=self.current_response_info)
 
     def generate_irregular_pacing_function(self, protocol, pacing_info):
         offset_times = protocol.make_offset_generator()
@@ -561,9 +595,22 @@ class PaciModel:
             1] = ca_sr_buf_sr * self.vc_micrometer_cube / self.v_sr_micrometer_cube * (
                 i_up - (i_rel + i_leak))
 
+
+        # No Ion Selective
+        i_no_ion = 0
+        if self.is_no_ion_selective:
+            i_cal_no_ion_add, i_na_ca_no_ion_add = 0, 0
+            if 'G_CaL' in self.no_ion_selective.keys():
+                i_cal_no_ion_add = i_ca_l * self.no_ion_selective['G_CaL']
+
+            if 'K_NaCa' in self.no_ion_selective.keys():
+                i_na_ca_no_ion_add = i_na_ca * self.no_ion_selective['K_NaCa']
+            
+            i_no_ion = i_cal_no_ion_add + i_na_ca_no_ion_add
+
         # Membrane potential
         d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l +
-                   i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
+                   i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca + i_no_ion)
 
         if self.current_response_info:
             current_timestep = [
