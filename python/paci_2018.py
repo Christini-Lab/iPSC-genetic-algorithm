@@ -94,7 +94,15 @@ class PaciModel:
         self.current_response_info = None
         self.full_y = []
 
-    def generate_response(self, protocol):
+    @property
+    def no_ion_selective(self):
+        return self.__no_ion_selective
+
+    @no_ion_selective.setter
+    def no_ion_selective(self, no_ion_selective):
+        self.__no_ion_selective = no_ion_selective
+
+    def generate_response(self, protocol, is_no_ion_selective=False):
         """Returns a trace based on the specified target objective.
 
         Args:
@@ -110,12 +118,12 @@ class PaciModel:
         self.d_y_voltage = []
         self.full_y = []
 
+        self.is_no_ion_selective = is_no_ion_selective
+
         if isinstance(protocol, protocols.SingleActionPotentialProtocol):
             return self.generate_single_AP_response(protocol)
- 
         elif isinstance(protocol, protocols.IrregularPacingProtocol):
             return self.generate_irregular_pacing_response(protocol)
-
         elif isinstance(protocol, protocols.VoltageClampProtocol):
             return self.generate_VC_protocol_response(protocol)
 
@@ -136,11 +144,17 @@ class PaciModel:
         """
         self.current_response_info = trace.CurrentResponseInfo()
         try:
-            integrate.solve_ivp(
+            x = integrate.solve_ivp(
                 self.generate_single_action_potential_function(),
                 [0, protocol.duration],
                 self.y_initial,
                 method='BDF')
+            #START HERE
+            # APPROACH:
+            # don't return anything from this function. Inside generate_response, 
+            # find all times find location of all self.t_all equal to t
+            import pdb
+            pdb.set_trace()
         except ValueError:
             print('Model could not produce trace.')
             return None
@@ -599,14 +613,21 @@ class PaciModel:
         # No Ion Selective
         i_no_ion = 0
         if self.is_no_ion_selective:
-            i_cal_no_ion_add, i_na_ca_no_ion_add = 0, 0
-            if 'G_CaL' in self.no_ion_selective.keys():
-                i_cal_no_ion_add = i_ca_l * self.no_ion_selective['G_CaL']
-
-            if 'K_NaCa' in self.no_ion_selective.keys():
-                i_na_ca_no_ion_add = i_na_ca * self.no_ion_selective['K_NaCa']
-            
-            i_no_ion = i_cal_no_ion_add + i_na_ca_no_ion_add
+            current_dictionary = {'I_K1':  i_k1,
+                                  'I_To':  i_to,
+                                  'I_Kr':  i_kr,
+                                  'I_Ks':  i_ks,
+                                  'I_CaL': i_ca_l,
+                                  'I_NaK': i_na_k,
+                                  'I_Na':  i_na,
+                                  'I_NaL': i_na_l,
+                                  'I_NaCa': i_na_ca,
+                                  'I_pCa': i_p_ca,
+                                  'I_F': i_f,
+                                  'I_bNa': i_b_na,
+                                  'I_bCa': i_b_ca}
+            for curr_name, scale in self.no_ion_selective.items():
+                i_no_ion += scale * current_dictionary[curr_name]
 
         # Membrane potential
         d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l +
