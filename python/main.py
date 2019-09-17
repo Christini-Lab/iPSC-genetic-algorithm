@@ -10,7 +10,6 @@ import ga_configs
 import genetic_algorithm_results
 import voltage_clamp_optimization_experiments
 
-
 PARAMETERS = [
     ga_configs.Parameter(name='G_Na', default_value=3671.2302),
     ga_configs.Parameter(name='G_F', default_value=30.10312),
@@ -116,8 +115,8 @@ def main():
     """Run parameter tuning or voltage clamp protocol experiments here
     """
     parameter_tuning_experiments.run_param_tuning_experiment(
-            config=VC_CONFIG,
-            with_output=True)
+        config=VC_CONFIG,
+        with_output=True)
 
 if __name__ == '__main__':
     main()
