@@ -48,7 +48,7 @@ VC_PROTOCOL = protocols.VoltageClampProtocol(
 )
 
 SAP_CONFIG = ga_configs.ParameterTuningConfig(
-    population_size=4,
+    population_size=10,
     max_generations=4,
     protocol=SAP_PROTOCOL,
     tunable_parameters=PARAMETERS,
@@ -74,7 +74,7 @@ IP_CONFIG = ga_configs.ParameterTuningConfig(
     tournament_size=4)
 
 VC_CONFIG = ga_configs.ParameterTuningConfig(
-    population_size=10,
+    population_size=4,
     max_generations=10,
     protocol=VC_PROTOCOL,
     tunable_parameters=PARAMETERS,
