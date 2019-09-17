@@ -58,37 +58,64 @@ class PaciModel:
     i_kr_red_med = 1
     i_ks_red_med = 1
 
-    y_names = ['Vm', 'Ca_SR', 'Cai', 'g', 'd', 'f1', 'f2', 'fCa', 'Xr1', 'Xr2',
-               'Xs', 'h', 'j', 'm', 'Xf', 'q', 'r', 'Nai', 'm_L', 'h_L', 'RyRa',
-               'RyRo', 'RyRc']
-    y_initial = [-0.0749228904740065, 0.0936532528714175, 3.79675694306440e-05,
-                 0, 8.25220533963093e-05, 0.741143500777858, 0.999983958619179,
-                 0.997742015033076, 0.266113517200784, 0.434907203275640,
-                 0.0314334976383401, 0.745356534740988, 0.0760523580322096,
-                 0.0995891726023512, 0.0249102482276486, 0.841714924246004,
-                 0.00558005376429710, 8.64821066193476, 0.00225383437957339,
-                 0.0811507312565017, 0.0387066722172937, 0.0260449185736275,
-                 0.0785849084330126]
-    y_initial_zero = [-0.070, 0.32, 0.0002, 0, 0, 1, 1, 1, 0, 1, 0, 0.75, 0.75,
-                      0, 0.1, 1, 0, 9.2, 0, 0.75, 0.3, 0.9, 0.1]
+    y_names = [
+        'Vm', 'Ca_SR', 'Cai', 'g', 'd', 'f1', 'f2', 'fCa', 'Xr1', 'Xr2', 'Xs',
+        'h', 'j', 'm', 'Xf', 'q', 'r', 'Nai', 'm_L', 'h_L', 'RyRa', 'RyRo',
+        'RyRc'
+    ]
+    y_initial = [
+        -0.0749228904740065, 0.0936532528714175, 3.79675694306440e-05, 0,
+        8.25220533963093e-05, 0.741143500777858, 0.999983958619179,
+        0.997742015033076, 0.266113517200784, 0.434907203275640,
+        0.0314334976383401, 0.745356534740988, 0.0760523580322096,
+        0.0995891726023512, 0.0249102482276486, 0.841714924246004,
+        0.00558005376429710, 8.64821066193476, 0.00225383437957339,
+        0.0811507312565017, 0.0387066722172937, 0.0260449185736275,
+        0.0785849084330126
+    ]
+    y_initial_zero = [
+        -0.070, 0.32, 0.0002, 0, 0, 1, 1, 1, 0, 1, 0, 0.75, 0.75, 0, 0.1, 1, 0,
+        9.2, 0, 0.75, 0.3, 0.9, 0.1
+    ]
 
-    def __init__(self, updated_parameters=None):
-        self.default_parameters = {'G_Na': 3671.2302, 'G_CaL': 8.635702e-5,
-                                   'G_F': 30.10312, 'G_Ks': 2.041,
-                                   'G_Kr': 29.8667, 'G_K1': 28.1492,
-                                   'G_pCa': 0.4125, 'G_bNa': 0.95,
-                                   'G_bCa': 0.727272,
-                                   'G_NaL': 17.25}
+    def __init__(self, updated_parameters=None, no_ion_selective_dict=None):
+        self.default_parameters = {
+            'G_Na': 3671.2302,
+            'G_CaL': 8.635702e-5,
+            'G_F': 30.10312,
+            'G_Ks': 2.041,
+            'G_Kr': 29.8667,
+            'G_K1': 28.1492,
+            'G_pCa': 0.4125,
+            'G_bNa': 0.95,
+            'G_bCa': 0.727272,
+            'G_NaL': 17.25,
+            'K_NaCa': 3917.0463
+        }
+        self.no_ion_selective = {}
+        self.is_no_ion_selective = False
 
         if updated_parameters:
             self.default_parameters.update(updated_parameters)
+        if no_ion_selective_dict:
+            self.no_ion_selective = no_ion_selective_dict
+            self.is_no_ion_selective = True
+
         self.t = []
         self.y_voltage = []
         self.d_y_voltage = []
         self.current_response_info = None
         self.full_y = []
 
-    def generate_response(self, protocol):
+    @property
+    def no_ion_selective(self):
+        return self.__no_ion_selective
+
+    @no_ion_selective.setter
+    def no_ion_selective(self, no_ion_selective):
+        self.__no_ion_selective = no_ion_selective
+
+    def generate_response(self, protocol, is_no_ion_selective=False):
         """Returns a trace based on the specified target objective.
 
         Args:
@@ -104,59 +131,85 @@ class PaciModel:
         self.d_y_voltage = []
         self.full_y = []
 
+        self.is_no_ion_selective = is_no_ion_selective
+
         if isinstance(protocol, protocols.SingleActionPotentialProtocol):
-            self.current_response_info = trace.CurrentResponseInfo()
-            try:
-                integrate.solve_ivp(
-                    self.generate_single_action_potential_function(),
-                    [0, protocol.duration],
-                    self.y_initial,
-                    method='BDF')
-            except ValueError:
-                print('Model could not produce trace.')
-                return None
-            return trace.Trace(
-                self.t,
-                self.y_voltage,
-                current_response_info=self.current_response_info)
-
+            return self.generate_single_AP_response(protocol)
         elif isinstance(protocol, protocols.IrregularPacingProtocol):
-            pacing_info = trace.IrregularPacingInfo()
-            try:
-                integrate.solve_ivp(
-                    self.generate_irregular_pacing_function(
-                        protocol, pacing_info),
-                    [0, protocol.duration],
-                    self.y_initial,
-                    method='BDF',
-                    max_step=1e-3)
-            except ValueError:
-                return None
-            return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
-
+            return self.generate_irregular_pacing_response(protocol)
         elif isinstance(protocol, protocols.VoltageClampProtocol):
-            self.current_response_info = trace.CurrentResponseInfo(
-                protocol=protocol)
-            try:
-                integrate.solve_ivp(
-                    self.generate_voltage_clamp_function(protocol),
-                    [0, protocol.get_voltage_change_endpoints()[-1]],
-                    self.y_initial,
-                    method='BDF',
-                    max_step=1e-3)
-            except ValueError:
-                return None
-            return trace.Trace(
-                self.t,
-                self.y_voltage,
-                current_response_info=self.current_response_info)
+            return self.generate_VC_protocol_response(protocol)
 
     def generate_single_action_potential_function(self):
-
         def single_action_potential(t, y):
             return self.action_potential_diff_eq(t, y)
 
         return single_action_potential
+
+    def generate_single_AP_response(self, protocol):
+        """
+        Args:
+            protocol: An object of a specified protocol.
+
+        Returns:
+            A single action potential trace
+        """
+        self.current_response_info = trace.CurrentResponseInfo()
+        try:
+            solution = integrate.solve_ivp(
+                self.generate_single_action_potential_function(),
+                [0, protocol.duration],
+                self.y_initial,
+                method='BDF')
+            self._set_data_without_error(solution, is_current_response=True)
+        except ValueError:
+            print('Model could not produce trace.')
+            return None
+        return trace.Trace(self.t,
+                           self.y_voltage,
+                           current_response_info=self.current_response_info)
+
+    def generate_irregular_pacing_response(self, protocol):
+        """
+        Args:
+            protocol: An irregular pacing protocol 
+        Returns:
+            A irregular pacing trace
+        """
+        pacing_info = trace.IrregularPacingInfo()
+        try:
+            solution = integrate.solve_ivp(self.generate_irregular_pacing_function(
+                protocol, pacing_info), [0, protocol.duration],
+                                self.y_initial,
+                                method='BDF',
+                                max_step=1e-3)
+            self._set_data_without_error(solution)
+        except ValueError:
+            return None
+        return trace.Trace(self.t, self.y_voltage, pacing_info=pacing_info)
+
+    def generate_VC_protocol_response(self, protocol):
+        """
+        Args:
+            protocol: A voltage clamp protocol
+        Returns:
+            A Trace object for a voltage clamp protocol
+        """
+        self.current_response_info = trace.CurrentResponseInfo(
+            protocol=protocol)
+        try:
+            solution = integrate.solve_ivp(
+                self.generate_voltage_clamp_function(protocol),
+                [0, protocol.get_voltage_change_endpoints()[-1]],
+                self.y_initial,
+                method='BDF',
+                max_step=1e-3)
+            self._set_data_without_error(solution, is_current_response=True)
+        except ValueError:
+            return None
+        return trace.Trace(self.t,
+                           self.y_voltage,
+                           current_response_info=self.current_response_info)
 
     def generate_irregular_pacing_function(self, protocol, pacing_info):
         offset_times = protocol.make_offset_generator()
@@ -187,7 +240,6 @@ class PaciModel:
         return irregular_pacing
 
     def generate_voltage_clamp_function(self, protocol):
-
         def voltage_clamp(t, y):
             y[0] = protocol.get_voltage_at_time(t)
             return self.action_potential_diff_eq(t, y)
@@ -213,8 +265,8 @@ class PaciModel:
             self.ko_millimolar / self.ki_millimolar)
         pk_na = 0.03
         e_ks = self.r_joule_per_mole_kelvin * self.t_kelvin / self.f_coulomb_per_mole * log(
-            (self.ko_millimolar + pk_na * self.nao_millimolar) / (
-                    self.ki_millimolar + pk_na * y[17]))
+            (self.ko_millimolar + pk_na * self.nao_millimolar) /
+            (self.ki_millimolar + pk_na * y[17]))
 
         # iNa
         i_na = ((t < self.t_drug_application) * 1 + (
@@ -226,8 +278,8 @@ class PaciModel:
         h_inf = 1.0 / sqrt(1.0 + np.exp((y[0] * 1000.0 + 72.1) / 5.7))
         alpha_h = 0.057 * np.exp(-(y[0] * 1000.0 + 80.0) / 6.8)
         beta_h = 2.7 * np.exp(
-            0.079 * y[0] * 1000.0) + 3.1 * 10.0 ** 5.0 * np.exp(
-            0.3485 * y[0] * 1000.0)
+            0.079 * y[0] * 1000.0) + 3.1 * 10.0**5.0 * np.exp(
+                0.3485 * y[0] * 1000.0)
         if y[0] < -0.0385:
             tau_h = 1.5 / ((alpha_h + beta_h) * 1000.0)
         else:
@@ -246,8 +298,8 @@ class PaciModel:
             alpha_j = 0.0
 
         if y[0] < -0.04:
-            beta_j = ((0.02424 * np.exp(-0.01052 * y[0] * 1000) / (
-                    1 + np.exp(-0.1378 * (y[0] * 1000 + 40.14)))))
+            beta_j = ((0.02424 * np.exp(-0.01052 * y[0] * 1000) /
+                       (1 + np.exp(-0.1378 * (y[0] * 1000 + 40.14)))))
         else:
             beta_j = ((0.6 * np.exp(0.057 * y[0] * 1000) /
                        (1 + np.exp(-0.1 * (y[0] * 1000 + 32)))))
@@ -255,11 +307,12 @@ class PaciModel:
         tau_j = 7.0 / ((alpha_j + beta_j) * 1000.0)
         d_y[12] = (j_inf - y[12]) / tau_j
 
-        m_inf = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 34.1) / 5.9)) ** (
-                    1.0 / 3.0)
+        m_inf = 1.0 / (1.0 + np.exp(
+            (-y[0] * 1000.0 - 34.1) / 5.9))**(1.0 / 3.0)
         alpha_m = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 60.0) / 5.0))
-        beta_m = 0.1 / (1.0 + np.exp((y[0] * 1000.0 + 35.0) / 5.0)) + 0.1 / (
-                1.0 + np.exp((y[0] * 1000.0 - 50.0) / 200.0))
+        beta_m = 0.1 / (1.0 + np.exp(
+            (y[0] * 1000.0 + 35.0) / 5.0)) + 0.1 / (1.0 + np.exp(
+                (y[0] * 1000.0 - 50.0) / 200.0))
         tau_m = 1.0 * alpha_m * beta_m / 1000.0
         d_y[13] = (m_inf - y[13]) / tau_m
 
@@ -267,13 +320,14 @@ class PaciModel:
         my_coef_tau_m = 1
         tau_i_na_l_ms = 200
         vh_h_late = 87.61
-        i_na_l = self.default_parameters['G_NaL'] * y[18] ** 3 * y[19] * (
-                    y[0] - e_na)
+        i_na_l = self.default_parameters['G_NaL'] * y[18]**3 * y[19] * (y[0] -
+                                                                        e_na)
 
         m_inf_l = 1 / (1 + np.exp(-(y[0] * 1000 + 42.85) / 5.264))
         alpha_m_l = 1 / (1 + np.exp((-60 - y[0] * 1000) / 5))
-        beta_m_l = 0.1 / (1 + np.exp((y[0] * 1000 + 35) / 5)) + 0.1 / (
-                1 + np.exp((y[0] * 1000 - 50) / 200))
+        beta_m_l = 0.1 / (1 + np.exp(
+            (y[0] * 1000 + 35) / 5)) + 0.1 / (1 + np.exp(
+                (y[0] * 1000 - 50) / 200))
         tau_m_l = 1 / 1000 * my_coef_tau_m * alpha_m_l * beta_m_l
         d_y[18] = (m_inf_l - y[18]) / tau_m_l
 
@@ -284,11 +338,11 @@ class PaciModel:
         # i f
         e_f_volt = -0.017
         i_f = self.default_parameters['G_F'] * y[14] * (y[0] - e_f_volt)
-        i_f_na = 0.42 * self.default_parameters['G_F'] * y[14] * (
-                    y[0] - e_na)
+        i_f_na = 0.42 * self.default_parameters['G_F'] * y[14] * (y[0] - e_na)
 
         xf_infinity = 1.0 / (1.0 + np.exp((y[0] * 1000.0 + 77.85) / 5.0))
-        tau_xf = 1900.0 / (1.0 + np.exp((y[0] * 1000.0 + 15.0) / 10.0)) / 1000.0
+        tau_xf = 1900.0 / (1.0 + np.exp(
+            (y[0] * 1000.0 + 15.0) / 10.0)) / 1000.0
         d_y[14] = (xf_infinity - y[14]) / tau_xf
 
         # i CaL
@@ -319,24 +373,21 @@ class PaciModel:
         else:
             const_f1 = 1.0
 
-        tau_f1 = (20.0 + 1102.5 * np.exp(
-            -((y[0] * 1000.0 + 27.0) ** 2.0 / 15.0) ** 2.0) + 200.0 / (
-                          1.0 + np.exp(
-                      (13.0 - y[0] * 1000.0) / 10.0)) + 180.0 / (
-                          1.0 + np.exp(
-                      (30.0 + y[0] * 1000.0) / 10.0))) * const_f1 / 1000.0
+        tau_f1 = (20.0 + 1102.5 * np.exp(-(
+            (y[0] * 1000.0 + 27.0)**2.0 / 15.0)**2.0) + 200.0 / (1.0 + np.exp(
+                (13.0 - y[0] * 1000.0) / 10.0)) + 180.0 / (1.0 + np.exp(
+                    (30.0 + y[0] * 1000.0) / 10.0))) * const_f1 / 1000.0
         d_y[5] = (f1_inf - y[5]) / tau_f1
 
         f2_inf = 0.33 + 0.67 / (1.0 + np.exp((y[0] * 1000.0 + 32.0) / 4.0))
         const_f2 = 1.0
-        tau_f2 = (600.0 * np.exp(
-            -(y[0] * 1000.0 + 25.0) ** 2.0 / 170.0) + 31.0 / (
-                          1.0 + np.exp(
+        tau_f2 = (600.0 * np.exp(-(y[0] * 1000.0 + 25.0)**2.0 / 170.0) + 31.0 /
+                  (1.0 + np.exp(
                       (25.0 - y[0] * 1000.0) / 10.0)) + 16.0 / (1.0 + np.exp(
-            (30.0 + y[0] * 1000.0) / 10.0))) * const_f2 / 1000.0
+                          (30.0 + y[0] * 1000.0) / 10.0))) * const_f2 / 1000.0
         d_y[6] = (f2_inf - y[6]) / tau_f2
 
-        alpha_f_ca = 1.0 / (1.0 + (y[2] / 0.0006) ** 8.0)
+        alpha_f_ca = 1.0 / (1.0 + (y[2] / 0.0006)**8.0)
         beta_f_ca = 0.1 / (1.0 + np.exp((y[2] - 0.0009) / 0.0001))
         gamma_f_ca = 0.3 / (1.0 + np.exp((y[2] - 0.00075) / 0.0008))
         f_ca_inf = (alpha_f_ca + beta_f_ca + gamma_f_ca) / 1.3156
@@ -353,15 +404,15 @@ class PaciModel:
         i_to = g_to_s_per_f * (y[0] - e_k) * y[15] * y[16]
 
         q_inf = 1.0 / (1.0 + np.exp((y[0] * 1000.0 + 53.0) / 13.0))
-        tau_q = (6.06 + 39.102 / (
-                0.57 * np.exp(-0.08 * (y[0] * 1000.0 + 44.0)) + 0.065 *
-                np.exp(0.1 * (y[0] * 1000.0 + 45.93)))) / 1000.0
+        tau_q = (6.06 + 39.102 /
+                 (0.57 * np.exp(-0.08 * (y[0] * 1000.0 + 44.0)) +
+                  0.065 * np.exp(0.1 * (y[0] * 1000.0 + 45.93)))) / 1000.0
         d_y[15] = (q_inf - y[15]) / tau_q
 
         r_inf = 1.0 / (1.0 + np.exp(-(y[0] * 1000.0 - 22.3) / 18.75))
-        tau_r = (2.75352 + 14.40516 / (
-                1.037 * np.exp(0.09 * (y[0] * 1000.0 + 30.61)) + 0.369 * np.exp(
-            -0.12 * (y[0] * 1000.0 + 23.84)))) / 1000.0
+        tau_r = (2.75352 + 14.40516 /
+                 (1.037 * np.exp(0.09 * (y[0] * 1000.0 + 30.61)) +
+                  0.369 * np.exp(-0.12 * (y[0] * 1000.0 + 23.84)))) / 1000.0
         d_y[16] = (r_inf - y[16]) / tau_r
 
         # i Ks
@@ -386,10 +437,12 @@ class PaciModel:
                        y[0] - e_k) * y[8] * y[9] * sqrt(
             self.ko_millimolar / 5.4)
 
-        v_half = 1000.0 * (-self.r_joule_per_mole_kelvin * self.t_kelvin / (
-                self.f_coulomb_per_mole * q) * log(
-            (1.0 + self.cao_millimolar / 2.6) ** 4.0 / (
-                    l0 * (1.0 + self.cao_millimolar / 0.58) ** 4.0)) - 0.019)
+        v_half = 1000.0 * (-self.r_joule_per_mole_kelvin * self.t_kelvin /
+                           (self.f_coulomb_per_mole * q) * log(
+                               (1.0 + self.cao_millimolar / 2.6)**4.0 /
+                               (l0 *
+                                (1.0 + self.cao_millimolar / 0.58)**4.0)) -
+                           0.019)
 
         xr1_inf = 1.0 / (1.0 + np.exp((v_half - y[0] * 1000.0) / 4.9))
         alpha_xr1 = 450.0 / (1.0 + np.exp((-45.0 - y[0] * 1000.0) / 10.0))
@@ -404,15 +457,16 @@ class PaciModel:
         d_y[9] = (xr2_infinity - y[9]) / tau_xr2
 
         # i K1
-        alpha_k1 = 3.91 / (
-                1.0 + np.exp(0.5942 * (y[0] * 1000.0 - e_k * 1000.0 - 200.0)))
-        beta_k1 = (-1.509 * np.exp(
-            0.0002 * (y[0] * 1000.0 - e_k * 1000.0 + 100.0)) + np.exp(
-            0.5886 * (y[0] * 1000.0 - e_k * 1000.0 - 10.0))) / (
-                          1.0 + np.exp(0.4547 * (y[0] * 1000.0 - e_k * 1000.0)))
+        alpha_k1 = 3.91 / (1.0 +
+                           np.exp(0.5942 *
+                                  (y[0] * 1000.0 - e_k * 1000.0 - 200.0)))
+        beta_k1 = (-1.509 * np.exp(0.0002 *
+                                   (y[0] * 1000.0 - e_k * 1000.0 + 100.0)) +
+                   np.exp(0.5886 * (y[0] * 1000.0 - e_k * 1000.0 - 10.0))) / (
+                       1.0 + np.exp(0.4547 * (y[0] * 1000.0 - e_k * 1000.0)))
         xk1_inf = alpha_k1 / (alpha_k1 + beta_k1)
-        i_k1 = self.default_parameters['G_K1'] * xk1_inf * (
-                    y[0] - e_k) * sqrt(self.ko_millimolar / 5.4)
+        i_k1 = self.default_parameters['G_K1'] * xk1_inf * (y[0] - e_k) * sqrt(
+            self.ko_millimolar / 5.4)
 
         # i NaCa
         km_ca_millimolar = 1.38
@@ -420,75 +474,37 @@ class PaciModel:
         ksat = 0.1
         gamma = 0.35
         k_na_ca1_a_per_f = self.k_na_ca_a_per_f
-        i_na_ca = (
-                k_na_ca1_a_per_f
-                * (
-                        np.exp(
-                            gamma
-                            * y[0]
-                            * self.f_coulomb_per_mole
-                            / (self.r_joule_per_mole_kelvin * self.t_kelvin)
-                        )
-                        * y[17] ** 3.0
-                        * self.cao_millimolar
-                        - np.exp(
-                    (gamma - 1.0)
-                    * y[0]
-                    * self.f_coulomb_per_mole
-                    / (self.r_joule_per_mole_kelvin * self.t_kelvin)
-                )
-                        * self.nao_millimolar ** 3.0
-                        * y[2]
-                        * self.alpha_in_i_na_ca
-                )
-                / (
-                        (km_nai_millimolar ** 3.0 + self.nao_millimolar ** 3.0)
-                        * (km_ca_millimolar + self.cao_millimolar)
-                        * (
-                                1.0
-                                + ksat
-                                * np.exp(
-                            (gamma - 1.0)
-                            * y[0]
-                            * self.f_coulomb_per_mole
-                            / (self.r_joule_per_mole_kelvin * self.t_kelvin)
-                        )
-                        )
-                )
-        )
+        i_na_ca = (k_na_ca1_a_per_f *
+                   (np.exp(gamma * y[0] * self.f_coulomb_per_mole /
+                           (self.r_joule_per_mole_kelvin * self.t_kelvin)) *
+                    y[17]**3.0 * self.cao_millimolar - np.exp(
+                        (gamma - 1.0) * y[0] * self.f_coulomb_per_mole /
+                        (self.r_joule_per_mole_kelvin * self.t_kelvin)) *
+                    self.nao_millimolar**3.0 * y[2] * self.alpha_in_i_na_ca) /
+                   ((km_nai_millimolar**3.0 + self.nao_millimolar**3.0) *
+                    (km_ca_millimolar + self.cao_millimolar) *
+                    (1.0 + ksat * np.exp(
+                        (gamma - 1.0) * y[0] * self.f_coulomb_per_mole /
+                        (self.r_joule_per_mole_kelvin * self.t_kelvin)))))
 
         # i NaK
         km_k_millimolar = 1.0
         km_na_millimolar = 40.0
         p_na_k1 = self.p_na_k_a_per_f
         i_na_k = (
-                p_na_k1
-                * self.ko_millimolar
-                / (self.ko_millimolar + km_k_millimolar)
-                * y[17]
-                / (y[17] + km_na_millimolar)
-                / (
-                        1.0
-                        + 0.1245
-                        * np.exp(
-                    -0.1
-                    * y[0]
-                    * self.f_coulomb_per_mole
-                    / (self.r_joule_per_mole_kelvin * self.t_kelvin)
-                )
-                        + 0.0353
-                        * np.exp(
-                    -y[0]
-                    * self.f_coulomb_per_mole
-                    / (self.r_joule_per_mole_kelvin * self.t_kelvin)
-                )
-                )
-        )
+            p_na_k1 * self.ko_millimolar /
+            (self.ko_millimolar + km_k_millimolar) * y[17] /
+            (y[17] + km_na_millimolar) /
+            (1.0 +
+             0.1245 * np.exp(-0.1 * y[0] * self.f_coulomb_per_mole /
+                             (self.r_joule_per_mole_kelvin * self.t_kelvin)) +
+             0.0353 * np.exp(-y[0] * self.f_coulomb_per_mole /
+                             (self.r_joule_per_mole_kelvin * self.t_kelvin))))
 
         # i pCa
         kp_ca_millimolar = 0.0005
-        i_p_ca = self.default_parameters['G_pCa'] * y[2] / (
-                    y[2] + kp_ca_millimolar)
+        i_p_ca = self.default_parameters['G_pCa'] * y[2] / (y[2] +
+                                                            kp_ca_millimolar)
 
         # Background currents
         i_b_na = self.default_parameters['G_bCa'] * (y[0] - e_na)
@@ -497,7 +513,7 @@ class PaciModel:
 
         # Sarcoplasmic reticulum
         i_up = self.vmax_up_millimolar_per_second / (
-                1.0 + self.k_up_millimolar ** 2.0 / y[2] ** 2.0)
+            1.0 + self.k_up_millimolar**2.0 / y[2]**2.0)
 
         i_leak = (y[1] - y[2]) * self.v_leak_per_second
 
@@ -505,17 +521,15 @@ class PaciModel:
 
         # RyR
         ry_rsr_cass = (1 - 1 / (1 + np.exp((y[1] - 0.3) / 0.1)))
-        i_rel = self.g_irel_max_millimolar_per_second * ry_rsr_cass * y[21] * y[
-            22] * (
-                        y[1] - y[2])
+        i_rel = self.g_irel_max_millimolar_per_second * ry_rsr_cass * y[
+            21] * y[22] * (y[1] - y[2])
 
         ry_rainfss = self.ry_ra_1_micromolar - self.ry_ra_2_micromolar / (
-                1 + np.exp((1000 * y[2] - self.ry_rahalf_micromolar) / 0.0082))
+            1 + np.exp((1000 * y[2] - self.ry_rahalf_micromolar) / 0.0082))
         ry_rtauadapt = 1
         d_y[20] = (ry_rainfss - y[20]) / ry_rtauadapt
 
-        ry_roinfss = (1 - 1 / (
-                1 + np.exp(
+        ry_roinfss = (1 - 1 / (1 + np.exp(
             (1000 * y[2] - (y[20] + self.ry_rohalf_micromolar)) / 0.003)))
         if ry_roinfss >= y[21]:
             ry_rtauact = 18.75e-3
@@ -538,32 +552,51 @@ class PaciModel:
         buf_sr_millimolar = 10.0
         kbuf_c_millimolar = 0.001
         kbuf_sr_millimolar = 0.3
-        cai_bufc = 1.0 / (
-                1.0 + buf_c_millimolar * kbuf_c_millimolar / (
-                y[2] + kbuf_c_millimolar) ** 2.0)
-        ca_sr_buf_sr = 1.0 / (
-                1.0 + buf_sr_millimolar * kbuf_sr_millimolar / (
-                y[1] + kbuf_sr_millimolar) ** 2.0)
+        cai_bufc = 1.0 / (1.0 + buf_c_millimolar * kbuf_c_millimolar /
+                          (y[2] + kbuf_c_millimolar)**2.0)
+        ca_sr_buf_sr = 1.0 / (1.0 + buf_sr_millimolar * kbuf_sr_millimolar /
+                              (y[1] + kbuf_sr_millimolar)**2.0)
 
         # Ionic concentrations
         # Nai
         d_y[17] = -self.cm_farad * (
-                i_na + i_na_l + i_b_na + 3.0 * i_na_k + 3.0 * i_na_ca + i_f_na
-        ) / (self.f_coulomb_per_mole * self.vc_micrometer_cube * 1.0e-18)
+            i_na + i_na_l + i_b_na + 3.0 * i_na_k + 3.0 * i_na_ca + i_f_na) / (
+                self.f_coulomb_per_mole * self.vc_micrometer_cube * 1.0e-18)
 
         # caSR
-        d_y[2] = cai_bufc * (i_leak - i_up + i_rel - (
-                i_ca_l + i_b_ca + i_p_ca - 2.0 * i_na_ca) * self.cm_farad / (
-                                     2.0 * self.vc_micrometer_cube *
-                                     self.f_coulomb_per_mole * 1.0e-18))
+        d_y[2] = cai_bufc * (
+            i_leak - i_up + i_rel -
+            (i_ca_l + i_b_ca + i_p_ca - 2.0 * i_na_ca) * self.cm_farad /
+            (2.0 * self.vc_micrometer_cube * self.f_coulomb_per_mole * 1.0e-18)
+        )
         # Cai
-        d_y[
-            1] = ca_sr_buf_sr * self.vc_micrometer_cube / self.v_sr_micrometer_cube * (
-                i_up - (i_rel + i_leak))
+        d_y[1] = ca_sr_buf_sr * self.vc_micrometer_cube / self.v_sr_micrometer_cube * (
+            i_up - (i_rel + i_leak))
+
+        # No Ion Selective
+        i_no_ion = 0
+        if self.is_no_ion_selective:
+            current_dictionary = {
+                'I_K1': i_k1,
+                'I_To': i_to,
+                'I_Kr': i_kr,
+                'I_Ks': i_ks,
+                'I_CaL': i_ca_l,
+                'I_NaK': i_na_k,
+                'I_Na': i_na,
+                'I_NaL': i_na_l,
+                'I_NaCa': i_na_ca,
+                'I_pCa': i_p_ca,
+                'I_F': i_f,
+                'I_bNa': i_b_na,
+                'I_bCa': i_b_ca
+            }
+            for curr_name, scale in self.no_ion_selective.items():
+                i_no_ion += scale * current_dictionary[curr_name]
 
         # Membrane potential
-        d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l +
-                   i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca)
+        d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l
+                   + i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca + i_no_ion)
 
         if self.current_response_info:
             current_timestep = [
@@ -586,10 +619,44 @@ class PaciModel:
         self.d_y_voltage.append(d_y[0])
         return d_y
 
+    def _set_data_without_error(self, solution, is_current_response=False):
+        """This method retroactively removes all unused steps from self.t,
+           self.y_voltage, self.full_y, and self.d_y_voltage after integrator
+           finishes.
+           This method was made for use ONLY with the forllowing methods:
+               - .generate_single_AP_response()
+               - .generate_irregular_pacing_response()
+               - .generate_VC_protocol_response()
+           These methods call solve_ivp(), which iterates over the
+           right hand side with a variable-sized timestep integrator.
+           To track current and a couple other parameters, we write to
+           the self.parameter list during each iteration, despite the fact
+           that the BDF integrator may throw out an interation.
+        """
+        time_full = np.asarray(self.t)
+        [un, indices] = np.unique(np.flip(time_full), return_index=True)
+        new_indices = np.abs(indices - len(time_full))
+        mask = np.invert(np.insert(np.diff(new_indices) < 0, [0], False))
+        correct_indices = new_indices[mask] - 1
+
+        self.t = np.asarray(self.t)[correct_indices].tolist()
+        self.y_voltage = np.asarray(self.y_voltage)[correct_indices].tolist()
+        self.full_y =  np.asarray(self.full_y)[correct_indices].tolist()
+        self.d_y_voltage = \
+            np.asarray(self.d_y_voltage)[correct_indices].tolist()
+
+        correct_currents = trace.CurrentResponseInfo()
+        for i in correct_indices:
+            if is_current_response:
+                correct_currents.currents.append(
+                       self.current_response_info.currents[i])
+
+        self.current_response_info.currents = correct_currents.currents
+
 
 def generate_trace(protocol: protocols.PROTOCOL_TYPE,
-                   tunable_parameters: List[ga_configs.Parameter]=None,
-                   params: List[float]=None) -> trace.Trace:
+                   tunable_parameters: List[ga_configs.Parameter] = None,
+                   params: List[float] = None) -> trace.Trace:
     """Generates a trace.
 
     Leave `params` argument empty if generating baseline trace with
@@ -609,5 +676,4 @@ def generate_trace(protocol: protocols.PROTOCOL_TYPE,
         for i in range(len(params)):
             new_params[tunable_parameters[i].name] = params[i]
 
-    return PaciModel(
-        updated_parameters=new_params).generate_response(protocol)
+    return PaciModel(updated_parameters=new_params).generate_response(protocol)

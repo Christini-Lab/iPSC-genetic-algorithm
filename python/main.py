@@ -22,6 +22,7 @@ PARAMETERS = [
     ga_configs.Parameter(name='G_CaL', default_value=8.635702e-5),
     ga_configs.Parameter(name='G_pCa', default_value=0.4125),
     ga_configs.Parameter(name='G_bCa', default_value=0.727272),
+    ga_configs.Parameter(name='K_NaCa', default_value=3917.0463)
 ]
 # Parameters are sorted alphabetically to maintain order during each
 # generation of the genetic algorithm.
@@ -112,8 +113,11 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 
 
 def main():
-    parameter_tuning_experiments.generate_restitution_curve()
-
+    """Run parameter tuning or voltage clamp protocol experiments here
+    """
+    parameter_tuning_experiments.run_param_tuning_experiment(
+            config=VC_CONFIG,
+            with_output=True)
 
 if __name__ == '__main__':
     main()
