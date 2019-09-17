@@ -113,8 +113,11 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
 
 
 def main():
-    parameter_tuning_experiments.generate_restitution_curve()
-
+    """Run parameter tuning or voltage clamp protocol experiments here
+    """
+    parameter_tuning_experiments.run_param_tuning_experiment(
+            config=VC_CONFIG,
+            with_output=True)
 
 if __name__ == '__main__':
     main()
