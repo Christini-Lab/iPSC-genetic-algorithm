@@ -14,13 +14,14 @@ from deap import creator
 from deap import tools
 import numpy as np
 import scipy.interpolate
+import multiprocessing
 
 import ga_configs
 import genetic_algorithm_results
 import paci_2018
 import protocols
 import trace
-
+import time
 
 class ParameterTuningGeneticAlgorithm:
     """Encapsulates state and behavior of a parameter tuning genetic algorithm.
@@ -196,6 +197,10 @@ class ParameterTuningGeneticAlgorithm:
         creator.create('Individual', list, fitness=creator.FitnessMin)
 
         toolbox = base.Toolbox()
+
+        pool = multiprocessing.Pool()
+        toolbox.register("map", pool.map)
+
         toolbox.register('init_param', self._initialize_parameters)
         toolbox.register(
             'individual',
