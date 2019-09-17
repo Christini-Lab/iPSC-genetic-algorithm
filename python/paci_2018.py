@@ -633,16 +633,15 @@ class PaciModel:
            the self.parameter list during each iteration, despite the fact
            that the BDF integrator may throw out an interation.
         """
-        time = solution['t']
         time_full = np.asarray(self.t)
         [un, indices] = np.unique(np.flip(time_full), return_index=True)
         new_indices = np.abs(indices - len(time_full))
         mask = np.invert(np.insert(np.diff(new_indices) < 0, [0], False))
         correct_indices = new_indices[mask] - 1
 
-        self.t = time.tolist()
-        self.y_voltage = solution['y'][0, :].tolist()
-        self.full_y = np.transpose(solution['y']).tolist()
+        self.t = np.asarray(self.t)[correct_indices].tolist()
+        self.y_voltage = np.asarray(self.y_voltage)[correct_indices].tolist()
+        self.full_y =  np.asarray(self.full_y)[correct_indices].tolist()
         self.d_y_voltage = \
             np.asarray(self.d_y_voltage)[correct_indices].tolist()
 
