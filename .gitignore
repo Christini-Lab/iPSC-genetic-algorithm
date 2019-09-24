@@ -4,3 +4,4 @@ python/figures/
 python/imported_figures/
 python/logs/
 */.mypy_cache
+*.swp
