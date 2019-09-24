@@ -473,41 +473,6 @@ class PaciModel(CellModel):
         self.d_y_voltage.append(d_y[0])
         return d_y
 
-    def _set_data_without_error(self, solution, is_current_response=False):
-        """This method retroactively removes all unused steps from self.t,
-           self.y_voltage, self.full_y, and self.d_y_voltage after integrator
-           finishes.
-           This method was made for use ONLY with the forllowing methods:
-               - .generate_single_AP_response()
-               - .generate_irregular_pacing_response()
-               - .generate_VC_protocol_response()
-           These methods call solve_ivp(), which iterates over the
-           right hand side with a variable-sized timestep integrator.
-           To track current and a couple other parameters, we write to
-           the self.parameter list during each iteration, despite the fact
-           that the BDF integrator may throw out an interation.
-        """
-        time_full = np.asarray(self.t)
-        [un, indices] = np.unique(np.flip(time_full), return_index=True)
-        new_indices = np.abs(indices - len(time_full))
-        mask = np.invert(np.insert(np.diff(new_indices) < 0, [0], False))
-        correct_indices = new_indices[mask] - 1
-
-        self.t = np.asarray(self.t)[correct_indices].tolist()
-        self.y_voltage = np.asarray(self.y_voltage)[correct_indices].tolist()
-        self.full_y =  np.asarray(self.full_y)[correct_indices].tolist()
-        self.d_y_voltage = \
-            np.asarray(self.d_y_voltage)[correct_indices].tolist()
-
-        correct_currents = trace.CurrentResponseInfo()
-        for i in correct_indices:
-            if is_current_response:
-                correct_currents.currents.append(
-                       self.current_response_info.currents[i])
-
-        self.current_response_info.currents = correct_currents.currents
-
-
 def generate_trace(protocol: protocols.PROTOCOL_TYPE,
                    tunable_parameters: List[ga_configs.Parameter] = None,
                    params: List[float] = None) -> trace.Trace:
