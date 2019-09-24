@@ -9,6 +9,7 @@ import protocols
 import ga_configs
 import genetic_algorithm_results
 import voltage_clamp_optimization_experiments
+from deap import dtm
 
 PARAMETERS = [
     ga_configs.Parameter(name='G_Na', default_value=3671.2302),
@@ -110,13 +111,20 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
     adequate_fitness_threshold=0.95,
     ga_config=VCO_CONFIG)
 
+VC_PROTOCOL_negative80 = protocols.VoltageClampProtocol(
+    steps=[
+        protocols.VoltageClampStep(duration=3, voltage=-0.08),
+    ]
+)
 
 def main():
     """Run parameter tuning or voltage clamp protocol experiments here
     """
-    parameter_tuning_experiments.run_param_tuning_experiment(
-        config=VC_CONFIG,
-        with_output=True)
+    #parameter_tuning_experiments.run_param_tuning_experiment(
+    #    config=VC_CONFIG,
+    #    with_output=True)
+
 
 if __name__ == '__main__':
-    main()
+    print('hi')
+    #dtm.start(main)
