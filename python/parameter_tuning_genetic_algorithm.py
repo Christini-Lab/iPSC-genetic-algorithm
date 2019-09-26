@@ -12,7 +12,6 @@ from typing import List
 from deap import base
 from deap import creator
 from deap import tools
-from deap import dtm
 import numpy as np
 import scipy.interpolate
 import multiprocessing
@@ -199,7 +198,6 @@ class ParameterTuningGeneticAlgorithm:
 
         toolbox = base.Toolbox()
 
-        toolbox.register('map', dtm.map)
         toolbox.register('init_param', self._initialize_parameters)
         toolbox.register(
             'individual',
