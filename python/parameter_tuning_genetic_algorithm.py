@@ -198,9 +198,6 @@ class ParameterTuningGeneticAlgorithm:
 
         toolbox = base.Toolbox()
 
-        pool = multiprocessing.Pool()
-        toolbox.register("map", pool.map)
-
         toolbox.register('init_param', self._initialize_parameters)
         toolbox.register(
             'individual',

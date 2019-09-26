@@ -110,13 +110,13 @@ COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
     adequate_fitness_threshold=0.95,
     ga_config=VCO_CONFIG)
 
-
 def main():
     """Run parameter tuning or voltage clamp protocol experiments here
     """
     parameter_tuning_experiments.run_param_tuning_experiment(
         config=VC_CONFIG,
         with_output=True)
+
 
 if __name__ == '__main__':
     main()
