@@ -609,6 +609,7 @@ class KernikModel(CellModel):
         self.d_y_voltage.append(d_y[0])
         return d_y
 
+
 def generate_trace(protocol: protocols.PROTOCOL_TYPE,
                    tunable_parameters: List[ga_configs.Parameter] = None,
                    params: List[float] = None) -> trace.Trace:
@@ -631,4 +632,4 @@ def generate_trace(protocol: protocols.PROTOCOL_TYPE,
         for i in range(len(params)):
             new_params[tunable_parameters[i].name] = params[i]
 
-    return PaciModel(updated_parameters=new_params).generate_response(protocol)
+    return KernikModel(updated_parameters=new_params).generate_response(protocol)
