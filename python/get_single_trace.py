@@ -9,19 +9,25 @@ VC_PROTOCOL_NEGATIVE80 = protocols.VoltageClampProtocol(
     ]
 )
 
+VC_PROTOCOL_ZERO = protocols.VoltageClampProtocol(
+    steps=[
+        protocols.VoltageClampStep(duration=20.0, voltage=-0.0000008),
+    ]
+)
+
+
 
 def main():
     """Run parameter tuning or voltage clamp protocol experiments here
     """
     paci_model = paci_2018.PaciModel()
-    paci_model.generate_response(protocol = VC_PROTOCOL_NEGATIVE80)
-    paci_trace = paci_2018.generate_trace(protocol = VC_PROTOCOL_NEGATIVE80)
+    paci_model.generate_response(protocol = VC_PROTOCOL_ZERO)
     fig = plt.figure(figsize=(10, 5))
 
     ax_1 = fig.add_subplot(511)
     ax_1.plot(
-            [1000 * i for i in paci_trace.t],
-            [i * 1000 for i in paci_trace.y],
+            [1000 * i for i in paci_model.t],
+            [i * 1000 for i in paci_model.y_voltage],
             'b',
             label='Voltage')
     plt.xlabel('Time (ms)')
@@ -32,7 +38,7 @@ def main():
     Cai = []
     CaSR = []
     i = 0
-    for currents in paci_trace.current_response_info.currents:
+    for currents in paci_model.current_response_info.currents:
         I_CaL.append(currents[4].value)
         I_NaCa.append(currents[8].value)
         Cai.append(paci_model.full_y[i][2])
@@ -41,7 +47,7 @@ def main():
 
     ax_2 = fig.add_subplot(512) 
     ax_2.plot(
-        [1000 * i for i in paci_trace.t],
+        [1000 * i for i in paci_model.t],
         I_CaL,
         'r--',
             label='I_CaL')
@@ -50,7 +56,7 @@ def main():
 
     ax_3 = fig.add_subplot(513) 
     ax_3.plot(
-        [1000 * i for i in paci_trace.t],
+        [1000 * i for i in paci_model.t],
         I_NaCa,
         'r--',
             label='I_NaCa')
@@ -58,7 +64,7 @@ def main():
     
     ax_4 = fig.add_subplot(514) 
     ax_4.plot(
-        [1000 * i for i in paci_trace.t],
+        [1000 * i for i in paci_model.t],
         Cai,
         'r--',
             label='Ca_i')
@@ -66,15 +72,13 @@ def main():
 
     ax_5 = fig.add_subplot(515) 
     ax_5.plot(
-        [1000 * i for i in paci_trace.t],
+        [1000 * i for i in paci_model.t],
         CaSR,
         'r--',
             label='CaSR')
     plt.ylabel(r'$Ca_{SR}$ (nA/nF)')
     
     plt.show()
-
-    pdb.set_trace()
 
 
 if __name__ == '__main__':
