@@ -19,7 +19,7 @@ class CellModel:
     """
 
     def __init__(self, y_initial=[], default_parameters=None, updated_parameters=None,
-            no_ion_selective_dict=None):
+                 no_ion_selective_dict=None, default_time_unit='s', default_voltage_unit='V'):
         self.y_initial = y_initial
         self.default_parameters = default_parameters
         self.no_ion_selective = {}
@@ -30,6 +30,16 @@ class CellModel:
         if no_ion_selective_dict:
             self.no_ion_selective = no_ion_selective_dict
             self.is_no_ion_selective = True
+
+        if default_time_unit == 's':
+            self.time_conversion = 1
+        else:
+            self.time_conversion = 1000
+
+        if default_voltage_unit == 'V':
+            self.voltage_conversion = 1
+        else:
+            self.voltage_conversion = 1000
 
         self.t = []
         self.y_voltage = []
@@ -209,4 +219,3 @@ class CellModel:
                        self.current_response_info.currents[i])
 
         self.current_response_info.currents = correct_currents.currents
-

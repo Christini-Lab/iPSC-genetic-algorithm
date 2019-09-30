@@ -8,18 +8,17 @@ import pdb
 
 class TestKernik(unittest.TestCase):
     def test_generate_trace_SAP(self):
-        protocol = protocols.SingleActionPotentialProtocol()
+        protocol = protocols.SingleActionPotentialProtocol(1800)
 
         baseline_trace = kernik.generate_trace(protocol)
 
         self.assertTrue(len(baseline_trace.t) > 100,
                 'Kernik errored in less than .4s')
-        self.assertTrue(min(baseline_trace.y) < -.01,
+        self.assertTrue(min(baseline_trace.y) < -10,
                 'baseline Kernik min is greater than -.01')
-        self.assertTrue(max(baseline_trace.y) < .06,
+        self.assertTrue(max(baseline_trace.y) < 60,
                 'baseline Kernik max is greater than .06')
 
 
 if __name__ == '__main__':
     unittest.main()
-
