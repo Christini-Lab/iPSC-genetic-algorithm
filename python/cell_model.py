@@ -122,7 +122,7 @@ class CellModel:
                 protocol, pacing_info), [0, protocol.duration],
                                 self.y_initial,
                                 method='BDF',
-                                max_step=1e-3)
+                                max_step=1e-3*self.time_conversion)
             self._set_data_without_error(solution)
         except ValueError:
             return None
@@ -143,7 +143,7 @@ class CellModel:
                 [0, protocol.get_voltage_change_endpoints()[-1]],
                 self.y_initial,
                 method='BDF',
-                max_step=1e-3)
+                max_step=1e-3self.time_conversion)
             self._set_data_without_error(solution, is_current_response=True)
         except ValueError:
             return None
