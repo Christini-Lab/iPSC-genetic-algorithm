@@ -126,7 +126,7 @@ class KernikModel(CellModel):
         self.t.append(t)
         self.full_y.append(y)
 
-        d_y = np.empty(23)
+        d_y = np.zeros(23)
 
         # --------------------------------------------------------------------
         # Reversal Potentials:
@@ -514,8 +514,8 @@ class KernikModel(CellModel):
         Kbuf_C = .0006  # millimolar (in calcium_dynamics)
         Cai_bufc = 1/(1.0+Buf_C*Kbuf_C/(y[2]+Kbuf_C)**2.0)
 
-        d_y[2] = (Cai_bufc)*(i_leak-i_up+i_rel-d_y[5] -
-                             (i_CaL_Ca+i_CaT+i_b_Ca+i_PCa-2*i_NaCa)*self.Cm/(2.0*self.Vc*self.F))
+        d_y[2] = (Cai_bufc)*(i_leak-i_up+i_rel-d_y[5] - 
+                (i_CaL_Ca+i_CaT+i_b_Ca+i_PCa-2*i_NaCa)*self.Cm/(2.0*self.Vc*self.F))
 
         # 4: Nai (millimolar) (in sodium_dynamics)
         d_y[3] = -self.Cm*(i_Na+i_b_Na+i_fNa+3.0*i_NaK+3.0*i_NaCa + i_CaL_Na)/(self.F*self.Vc)
@@ -568,9 +568,6 @@ class KernikModel(CellModel):
             ]
             self.current_response_info.currents.append(current_timestep)
 
-        if t > 0.0001:
-            import pdb
-            pdb.set_trace()
         return d_y
 
 
