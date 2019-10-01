@@ -12,13 +12,17 @@ class TestKernik(unittest.TestCase):
 
         baseline_model = kernik.KernikModel()
         baseline_model.generate_response(protocol)
-        pdb.set_trace()
+       
+        import matplotlib.pyplot as plt
+        plt.plot(baseline_model.t, baseline_model.y_voltage)
+        plt.show()
 
-        self.assertTrue(len(baseline_trace.t) > 100,
+        pdb.set_trace()
+        self.assertTrue(len(baseline_model.t) > 100,
                 'Kernik errored in less than .4s')
-        self.assertTrue(min(baseline_trace.y) < -10,
+        self.assertTrue(min(baseline_model.y_voltage) < -10,
                 'baseline Kernik min is greater than -.01')
-        self.assertTrue(max(baseline_trace.y) < 60,
+        self.assertTrue(max(baseline_model.y_voltage) < 60,
                 'baseline Kernik max is greater than .06')
 
 

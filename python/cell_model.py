@@ -100,7 +100,9 @@ class CellModel:
                 self.generate_single_action_potential_function(),
                 [0, protocol.duration],
                 self.y_initial,
-                method='BDF')
+                method='BDF',
+                max_step=1e-3*self.time_conversion)
+
                 
             self._set_data_without_error(solution, is_current_response=True)
         except ValueError:
@@ -201,8 +203,6 @@ class CellModel:
            the self.parameter list during each iteration, despite the fact
            that the BDF integrator may throw out an interation.
         """
-        import pdb
-        pdb.set_trace()
         time_full = np.asarray(self.t)
         [un, indices] = np.unique(np.flip(time_full), return_index=True)
         new_indices = np.abs(indices - len(time_full))

@@ -130,7 +130,7 @@ class KernikModel(CellModel):
 
         # --------------------------------------------------------------------
         # Reversal Potentials:
-        E_Ca = 0.5 * self.R * self.T / self.F * log(self.Cao / y[1])  # millivolt
+        E_Ca = 0.5 * self.R * self.T / self.F * log(self.Cao / y[2])  # millivolt
         E_Na = self.R * self.T / self.F * log(self.Nao / y[3])  # millivolt
         E_K = self.R * self.T / self.F * log(self.Ko / y[4])  # millivolt
 
@@ -568,9 +568,9 @@ class KernikModel(CellModel):
             ]
             self.current_response_info.currents.append(current_timestep)
 
-        import pdb
-        pdb.set_trace()
-
+        if t > 0.0001:
+            import pdb
+            pdb.set_trace()
         return d_y
 
 
