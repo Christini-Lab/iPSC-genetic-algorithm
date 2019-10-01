@@ -95,14 +95,24 @@ class CellModel:
             A single action potential trace
         """
         self.current_response_info = trace.CurrentResponseInfo()
+        solution = integrate.solve_ivp(
+                self.generate_single_action_potential_function(),
+                [0, protocol.duration],
+                self.y_initial,
+                method='BDF',
+                max_step=1e-3*self.time_conversion,
+                first_step=2e-5*self.time_conversion)
+        import pdb
+        pdb.set_trace()
+        
         try:
             solution = integrate.solve_ivp(
                 self.generate_single_action_potential_function(),
                 [0, protocol.duration],
                 self.y_initial,
                 method='BDF',
-                max_step=1e-3*self.time_conversion)
-
+                max_step=1e-3*self.time_conversion,
+                first_step=2e-5*self.time_conversion)
                 
             self._set_data_without_error(solution, is_current_response=True)
         except ValueError:
