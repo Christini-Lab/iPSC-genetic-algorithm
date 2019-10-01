@@ -8,6 +8,7 @@ from scipy import integrate
 import ga_configs
 import protocols
 import trace
+from math import log, exp
 
 
 class KernikModel(CellModel):
@@ -52,7 +53,10 @@ class KernikModel(CellModel):
 
     def __init__(self, default_parameters=None,
                  updated_parameters=None,
-                 no_ion_selective_dict=None):
+                 no_ion_selective_dict=None,
+                 default_time_unit='ms', 
+                 default_voltage_unit='mV'
+                 ):
 
         if not default_parameters:
             # default_parameters = self.model_parameter_inputs[0:16]
@@ -79,7 +83,9 @@ class KernikModel(CellModel):
         
         super().__init__(y_initial, default_parameters,
                          updated_parameters,
-                         no_ion_selective_dict)
+                         no_ion_selective_dict,
+                         default_time_unit,
+                         default_voltage_unit)
 
     def action_potential_diff_eq(self, t, y):
         """
@@ -147,14 +153,14 @@ class KernikModel(CellModel):
 
         # Rapid Delayed Rectifier Current (Ikr):
         # define parameters from x_KR
-        Xr1_1 = self.x_KR[0]
-        Xr1_2 = self.x_KR[1]
-        Xr1_5 = self.x_KR[2]
-        Xr1_6 = self.x_KR[3]
-        Xr2_1 = self.x_KR[4]
-        Xr2_2 = self.x_KR[5]
-        Xr2_5 = self.x_KR[6]
-        Xr2_6 = self.x_KR[7]
+        Xr1_1 = self.x_KR[1]
+        Xr1_2 = self.x_KR[2]
+        Xr1_5 = self.x_KR[3]
+        Xr1_6 = self.x_KR[4]
+        Xr2_1 = self.x_KR[5]
+        Xr2_2 = self.x_KR[6]
+        Xr2_5 = self.x_KR[7]
+        Xr2_6 = self.x_KR[8]
 
         # parameter-dependent values:
         Xr1_3 = Xr1_5*Xr1_1
@@ -334,7 +340,7 @@ class KernikModel(CellModel):
             ((y[0])+61.7)/15.38))
         d_y[19] = (fcat_inf-y[19])/tau_fcat
 
-        g_CaT = self.x_cat[0]*self.default_parameters['G_CaT']  # nS_per_pF (in i_CaT)
+        g_CaT = self.x_cat*self.default_parameters['G_CaT']  # nS_per_pF (in i_CaT)
         i_CaT = g_CaT*(y[0]-E_Ca)*y[18]*y[19]
 
         # Sodium Current (INa):
@@ -514,99 +520,57 @@ class KernikModel(CellModel):
         # 4: Nai (millimolar) (in sodium_dynamics)
         d_y[3] = -self.Cm*(i_Na+i_b_Na+i_fNa+3.0*i_NaK+3.0*i_NaCa + i_CaL_Na)/(self.F*self.Vc)
 
-        if stim_flag == 1:
-            d_y[3] = 0
-
         # 5: Ki (millimolar) (in potatssium_dynamics)
         d_y[4] = -self.Cm*(i_K1+i_to+i_Kr+i_Ks+i_fK - 2.*i_NaK + i_CaL_K)/(self.F*self.Vc)
 
-        if stim_flag == 1:
-            d_y[4] = 0
-
-        # 1: Vm (Membrane voltage)
-
-        # I_stim:
-        # if ((t >= i_stim_Start) and (t <= i_stim_End) and
-        #         (((t-i_stim_Start-100) % cyclelength) < i_stim_PulseDuration)):
-        #     i_stim = stim_flag*i_stim_Amplitude
-        # else:
-        #     i_stim = 0.0
-
-        #  Voltage Clamp:
-        # if voltageclamp == 0:
-        #     v_clamp = y[0]  # set i_voltageclamp to 0
-        # elif voltageclamp == 1:    # train of square pulse:
-        #     if (t % cyclelength) < (cyclelength-steplength):
-        #         v_clamp = v_clamp_rest
-        #     else:
-        #         v_clamp = v_clamp_step
-
-        # i_voltageclamp = (v_clamp-y[0])/R_clamp
-
-        d_y[0] = -(i_K1+i_to+i_Kr+i_Ks+i_CaL+i_CaT+i_NaK+i_Na+i_NaCa +
-                   i_PCa+i_f+i_b_Na+i_b_Ca)
-        currents = [i_K1, i_to, i_Kr, i_Ks, i_CaL, i_NaK, i_Na, i_NaCa,
-                    i_PCa, i_f, i_b_Na, i_b_Ca, i_rel, i_up, i_leak, i_CaT]
-
-        # d_y[0] = -(i_K1+i_to+i_Kr+i_Ks+i_CaL+i_CaT+i_NaK+i_Na+i_NaCa+ \
-        #            i_PCa+i_f+i_b_Na+i_b_Ca-i_stim - i_voltageclamp)
-        # currents = [i_K1, i_to, i_Kr, i_Ks, i_CaL, i_NaK, i_Na, i_NaCa,
-        #             i_PCa, i_f, i_b_Na, i_b_Ca, i_rel, i_up, i_leak, i_stim, i_CaT]
-
-
-
-
-
-
-
-
-
-
-
-        # No Ion Selective
         i_no_ion = 0
         if self.is_no_ion_selective:
             current_dictionary = {
-                'I_K1': i_k1,
-                'I_To': i_to,
-                'I_Kr': i_kr,
-                'I_Ks': i_ks,
-                'I_CaL': i_ca_l,
-                'I_NaK': i_na_k,
-                'I_Na': i_na,
-                'I_NaL': i_na_l,
-                'I_NaCa': i_na_ca,
-                'I_pCa': i_p_ca,
-                'I_F': i_f,
-                'I_bNa': i_b_na,
-                'I_bCa': i_b_ca
+                'I_K1':    i_K1,
+                'I_To':    i_to,
+                'I_Kr':    i_Kr,
+                'I_Ks':    i_Ks,
+                'I_CaL':   i_CaL_Ca,
+                'I_NaK':   i_NaK,
+                'I_Na':    i_Na,
+                'I_NaCa':  i_NaCa,
+                'I_pCa':   i_PCa,
+                'I_F':     i_f,
+                'I_bNa':   i_b_Na,
+                'I_bCa':   i_b_Ca,
+                'I_CaT':   i_CaT,
+                'I_up':    i_up,
+                'I_leak':  i_leak
             }
             for curr_name, scale in self.no_ion_selective.items():
                 i_no_ion += scale * current_dictionary[curr_name]
 
-        # Membrane potential
-        d_y[0] = -(i_k1 + i_to + i_kr + i_ks + i_ca_l + i_na_k + i_na + i_na_l
-                   + i_na_ca + i_p_ca + i_f + i_b_na + i_b_ca + i_no_ion)
+        d_y[0] = -(i_K1+i_to+i_Kr+i_Ks+i_CaL+i_CaT+i_NaK+i_Na+i_NaCa +
+                   i_PCa+i_f+i_b_Na+i_b_Ca + i_no_ion)
 
         if self.current_response_info:
             current_timestep = [
-                trace.Current(name='I_K1', value=i_k1),
+                trace.Current(name='I_K1', value=i_K1),
                 trace.Current(name='I_To', value=i_to),
-                trace.Current(name='I_Kr', value=i_kr),
-                trace.Current(name='I_Ks', value=i_ks),
-                trace.Current(name='I_CaL', value=i_ca_l),
-                trace.Current(name='I_NaK', value=i_na_k),
-                trace.Current(name='I_Na', value=i_na),
-                trace.Current(name='I_NaL', value=i_na_l),
-                trace.Current(name='I_NaCa', value=i_na_ca),
-                trace.Current(name='I_pCa', value=i_p_ca),
+                trace.Current(name='I_Kr', value=i_Kr),
+                trace.Current(name='I_Ks', value=i_Ks),
+                trace.Current(name='I_CaL', value=i_CaL_Ca),
+                trace.Current(name='I_NaK', value=i_NaK),
+                trace.Current(name='I_Na', value=i_Na),
+                trace.Current(name='I_NaCa', value=i_NaCa),
+                trace.Current(name='I_pCa', value=i_PCa),
                 trace.Current(name='I_F', value=i_f),
-                trace.Current(name='I_bNa', value=i_b_na),
-                trace.Current(name='I_bCa', value=i_b_ca),
+                trace.Current(name='I_bNa', value=i_b_Na),
+                trace.Current(name='I_bCa', value=i_b_Ca),
+                trace.Current(name='I_CaT', value=i_CaT),
+                trace.Current(name='I_up', value=i_up),
+                trace.Current(name='I_leak', value=i_leak)
             ]
             self.current_response_info.currents.append(current_timestep)
 
-        self.d_y_voltage.append(d_y[0])
+        import pdb
+        pdb.set_trace()
+
         return d_y
 
 

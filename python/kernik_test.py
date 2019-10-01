@@ -10,7 +10,9 @@ class TestKernik(unittest.TestCase):
     def test_generate_trace_SAP(self):
         protocol = protocols.SingleActionPotentialProtocol(1800)
 
-        baseline_trace = kernik.generate_trace(protocol)
+        baseline_model = kernik.KernikModel()
+        baseline_model.generate_response(protocol)
+        pdb.set_trace()
 
         self.assertTrue(len(baseline_trace.t) > 100,
                 'Kernik errored in less than .4s')
