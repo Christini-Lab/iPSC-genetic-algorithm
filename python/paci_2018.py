@@ -69,7 +69,7 @@ class PaciModel(CellModel):
         9.2, 0, 0.75, 0.3, 0.9, 0.1
     ]
 
-    def __init__(self, default_parameters={
+    default_conductances={
             'G_Na': 3671.2302,
             'G_CaL': 8.635702e-5,
             'G_F': 30.10312,
@@ -81,9 +81,25 @@ class PaciModel(CellModel):
             'G_bCa': 0.727272,
             'G_NaL': 17.25,
             'K_NaCa': 3917.0463
-            },
-            updated_parameters=None,
-            no_ion_selective_dict=None):
+            }
+
+    def __init__(self, default_parameters=None,
+                 updated_parameters=None,
+                 no_ion_selective_dict=None):
+
+        if not default_parameters:
+            default_parameters = {
+                'G_Na': 1,
+                'G_CaL': 1,
+                'G_F': 1,
+                'G_Ks': 1,
+                'G_Kr': 1,
+                'G_K1': 1,
+                'G_pCa': 1,
+                'G_bNa': 1,
+                'G_bCa': 1,
+                'G_NaL': 1,
+                'K_NaCa': 1}
 
         y_initial = [
             -0.0749228904740065, 0.0936532528714175, 3.79675694306440e-05, 0,
@@ -127,7 +143,7 @@ class PaciModel(CellModel):
                     t >= self.t_drug_application)
                 * self.i_na_f_red_med) * self.default_parameters['G_Na'] * y[
                    13] ** 3.0 * y[11] * y[12] * \
-               (y[0] - e_na)
+               (y[0] - e_na) * self.default_conductances['G_Na']
 
         h_inf = 1.0 / sqrt(1.0 + np.exp((y[0] * 1000.0 + 72.1) / 5.7))
         alpha_h = 0.057 * np.exp(-(y[0] * 1000.0 + 80.0) / 6.8)
@@ -174,8 +190,8 @@ class PaciModel(CellModel):
         my_coef_tau_m = 1
         tau_i_na_l_ms = 200
         vh_h_late = 87.61
-        i_na_l = self.default_parameters['G_NaL'] * y[18]**3 * y[19] * (y[0] -
-                                                                        e_na)
+        i_na_l = self.default_parameters['G_NaL'] * y[18]**3 *\
+            y[19] * (y[0] - e_na) * self.default_conductances['G_NaL']
 
         m_inf_l = 1 / (1 + np.exp(-(y[0] * 1000 + 42.85) / 5.264))
         alpha_m_l = 1 / (1 + np.exp((-60 - y[0] * 1000) / 5))
@@ -191,8 +207,10 @@ class PaciModel(CellModel):
 
         # i f
         e_f_volt = -0.017
-        i_f = self.default_parameters['G_F'] * y[14] * (y[0] - e_f_volt)
-        i_f_na = 0.42 * self.default_parameters['G_F'] * y[14] * (y[0] - e_na)
+        i_f = self.default_parameters['G_F'] * y[14] * \
+            (y[0] - e_f_volt) * self.default_conductances['G_F']
+        i_f_na = 0.42 * self.default_parameters['G_F'] * y[14] * (
+            y[0] - e_na) * self.default_conductances['G_F']
 
         xf_infinity = 1.0 / (1.0 + np.exp((y[0] * 1000.0 + 77.85) / 5.0))
         tau_xf = 1900.0 / (1.0 + np.exp(
@@ -201,15 +219,15 @@ class PaciModel(CellModel):
 
         # i CaL
         i_ca_l = ((t < self.t_drug_application) * 1 + (
-                    t >= self.t_drug_application) *
-                  self.i_ca_l_red_med) * self.default_parameters[
-                     'G_CaL'] * 4.0 * y[0] \
-                 * self.f_coulomb_per_mole ** 2.0 / (
-                         self.r_joule_per_mole_kelvin * self.t_kelvin) * \
-                 (y[2] * np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
-                         self.r_joule_per_mole_kelvin * self.t_kelvin)) - 0.341 *
-                  self.cao_millimolar) / (
-                             np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
+            t >= self.t_drug_application) *
+            self.i_ca_l_red_med) * self.default_conductances['G_CaL']\
+            * self.default_parameters['G_CaL'] * 4.0 * y[0] \
+            * self.f_coulomb_per_mole ** 2.0 / (
+            self.r_joule_per_mole_kelvin * self.t_kelvin) * \
+            (y[2] * np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
+                self.r_joule_per_mole_kelvin * self.t_kelvin)) - 0.341 *
+             self.cao_millimolar) / (
+            np.exp(2.0 * y[0] * self.f_coulomb_per_mole / (
                                      self.r_joule_per_mole_kelvin * self.t_kelvin)) - 1.0) * \
                  y[4] * y[5] * y[
                      6] * y[7]
@@ -274,7 +292,8 @@ class PaciModel(CellModel):
                     t >= self.t_drug_application) *
                 self.i_ks_red_med) * self.default_parameters['G_Ks'] * (
                            y[0] - e_ks) * y[10] ** 2.0 * \
-               (1.0 + 0.6 / (1.0 + (3.8 * 0.00001 / y[2]) ** 1.4))
+               (1.0 + 0.6 / (1.0 + (3.8 * 0.00001 / y[2]) ** 1.4)) \
+               * self.default_conductances['G_Ks']
 
         xs_infinity = 1.0 / (1.0 + np.exp((-y[0] * 1000.0 - 20.0) / 16.0))
         alpha_xs = 1100.0 / sqrt(1.0 + np.exp((-10.0 - y[0] * 1000.0) / 6.0))
@@ -287,8 +306,9 @@ class PaciModel(CellModel):
         q = 2.3  # dimensionless (in i_Kr_Xr1_gate)
         i_kr = ((t < self.t_drug_application) * 1 + (
                 t >= self.t_drug_application) * self.i_kr_red_med) * \
-               self.default_parameters['G_Kr'] * (
-                       y[0] - e_k) * y[8] * y[9] * sqrt(
+            self.default_parameters['G_Kr'] *\
+            self.default_conductances['G_Kr'] * (
+            y[0] - e_k) * y[8] * y[9] * sqrt(
             self.ko_millimolar / 5.4)
 
         v_half = 1000.0 * (-self.r_joule_per_mole_kelvin * self.t_kelvin /
@@ -320,14 +340,15 @@ class PaciModel(CellModel):
                        1.0 + np.exp(0.4547 * (y[0] * 1000.0 - e_k * 1000.0)))
         xk1_inf = alpha_k1 / (alpha_k1 + beta_k1)
         i_k1 = self.default_parameters['G_K1'] * xk1_inf * (y[0] - e_k) * sqrt(
-            self.ko_millimolar / 5.4)
+            self.ko_millimolar / 5.4) * self.default_conductances['G_K1']
 
         # i NaCa
         km_ca_millimolar = 1.38
         km_nai_millimolar = 87.5
         ksat = 0.1
         gamma = 0.35
-        k_na_ca1_a_per_f = self.k_na_ca_a_per_f
+        k_na_ca1_a_per_f = self.default_parameters['K_NaCa'] * \
+            self.default_conductances['K_NaCa']
         i_na_ca = (k_na_ca1_a_per_f *
                    (np.exp(gamma * y[0] * self.f_coulomb_per_mole /
                            (self.r_joule_per_mole_kelvin * self.t_kelvin)) *
@@ -358,12 +379,14 @@ class PaciModel(CellModel):
         # i pCa
         kp_ca_millimolar = 0.0005
         i_p_ca = self.default_parameters['G_pCa'] * y[2] / (y[2] +
-                                                            kp_ca_millimolar)
+                    kp_ca_millimolar) * self.default_conductances['G_pCa']
 
         # Background currents
-        i_b_na = self.default_parameters['G_bCa'] * (y[0] - e_na)
+        i_b_na = self.default_parameters['G_bNa'] * \
+            (y[0] - e_na) * self.default_conductances['G_bNa']
 
-        i_b_ca = self.default_parameters['G_bCa'] * (y[0] - e_ca)
+        i_b_ca = self.default_parameters['G_bCa'] * \
+            (y[0] - e_ca) * self.default_conductances['G_bCa']
 
         # Sarcoplasmic reticulum
         i_up = self.vmax_up_millimolar_per_second / (
