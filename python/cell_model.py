@@ -19,7 +19,7 @@ class CellModel:
     """
 
     def __init__(self, y_initial=[], default_parameters=None, updated_parameters=None,
-            no_ion_selective_dict=None):
+                 no_ion_selective_dict=None, default_time_unit='s', default_voltage_unit='V'):
         self.y_initial = y_initial
         self.default_parameters = default_parameters
         self.no_ion_selective = {}
@@ -30,6 +30,16 @@ class CellModel:
         if no_ion_selective_dict:
             self.no_ion_selective = no_ion_selective_dict
             self.is_no_ion_selective = True
+
+        if default_time_unit == 's':
+            self.time_conversion = 1
+        else:
+            self.time_conversion = 1000
+
+        if default_voltage_unit == 'V':
+            self.voltage_conversion = 1
+        else:
+            self.voltage_conversion = 1000
 
         self.t = []
         self.y_voltage = []
@@ -85,12 +95,15 @@ class CellModel:
             A single action potential trace
         """
         self.current_response_info = trace.CurrentResponseInfo()
+        
         try:
             solution = integrate.solve_ivp(
                 self.generate_single_action_potential_function(),
                 [0, protocol.duration],
                 self.y_initial,
-                method='BDF')
+                method='BDF',
+                max_step=1e-3*self.time_conversion)
+                
             self._set_data_without_error(solution, is_current_response=True)
         except ValueError:
             print('Model could not produce trace.')
@@ -112,7 +125,7 @@ class CellModel:
                 protocol, pacing_info), [0, protocol.duration],
                                 self.y_initial,
                                 method='BDF',
-                                max_step=1e-3)
+                                max_step=1e-3*self.time_conversion)
             self._set_data_without_error(solution)
         except ValueError:
             return None
@@ -133,7 +146,7 @@ class CellModel:
                 [0, protocol.get_voltage_change_endpoints()[-1]],
                 self.y_initial,
                 method='BDF',
-                max_step=1e-3)
+                max_step=1e-3*self.time_conversion)
             self._set_data_without_error(solution, is_current_response=True)
         except ValueError:
             return None
@@ -196,7 +209,7 @@ class CellModel:
         mask = np.invert(np.insert(np.diff(new_indices) < 0, [0], False))
         correct_indices = new_indices[mask] - 1
 
-        self.t = np.asarray(self.t)[correct_indices].tolist()
+        self.t = np.asarray(time_full)[correct_indices].tolist()
         self.y_voltage = np.asarray(self.y_voltage)[correct_indices].tolist()
         self.full_y =  np.asarray(self.full_y)[correct_indices].tolist()
         self.d_y_voltage = \
@@ -209,4 +222,3 @@ class CellModel:
                        self.current_response_info.currents[i])
 
         self.current_response_info.currents = correct_currents.currents
-

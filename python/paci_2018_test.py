@@ -15,7 +15,7 @@ class TestPaci2018(unittest.TestCase):
         self.assertTrue(len(baseline_trace.t) > 100,
                 'Paci errored in less than .4s')
         self.assertTrue(min(baseline_trace.y) < -.01,
-                'baseline Paci min is greater than .01')
+                'baseline Paci min is greater than -.01')
         self.assertTrue(max(baseline_trace.y)<.06,
                 'baseline Paci max is greater than .06')
 
