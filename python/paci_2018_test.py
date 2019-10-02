@@ -10,7 +10,9 @@ class TestPaci2018(unittest.TestCase):
     def test_generate_trace_SAP(self):
         protocol = protocols.SingleActionPotentialProtocol()
 
-        baseline_trace = paci_2018.generate_trace(protocol)
+        baseline_model = paci_2018.PaciModel()
+        baseline_model.generate_response(protocol)
+        pdb.set_trace()
 
         self.assertTrue(len(baseline_trace.t) > 100,
                 'Paci errored in less than .4s')
@@ -22,41 +24,32 @@ class TestPaci2018(unittest.TestCase):
     def test_update_parameters(self):
         protocol = protocols.SingleActionPotentialProtocol()
         tunable_parameters = [
-               ga_configs.Parameter(name='G_Na', default_value=3671.2302),
-               ga_configs.Parameter(name='G_F', default_value=30.10312),
-               ga_configs.Parameter(name='G_Ks', default_value=2.041),
-               ga_configs.Parameter(name='G_Kr', default_value=29.8667),
-               ga_configs.Parameter(name='G_K1', default_value=28.1492),
-               ga_configs.Parameter(name='G_bNa', default_value=0.95),
-               ga_configs.Parameter(name='G_NaL', default_value=17.25),
-               ga_configs.Parameter(name='G_CaL', default_value=8.635702e-5),
-               ga_configs.Parameter(name='G_pCa', default_value=0.4125),
-               ga_configs.Parameter(name='G_bCa', default_value=0.727272)]
-        new_params = [3671.2,
-                      30.1,
-                      2.04,
-                      29.8,
-                      28.1,
-                      0.95,
-                      17.2,
-                      8.63,
-                      0.41,
-                      0.72] 
-        new_params = [x * .7 for x in new_params]
+            ga_configs.Parameter(name='G_Na', default_value=1),
+            ga_configs.Parameter(name='G_F', default_value=1),
+            ga_configs.Parameter(name='G_Ks', default_value=1),
+            ga_configs.Parameter(name='G_Kr', default_value=1),
+            ga_configs.Parameter(name='G_K1', default_value=1),
+            ga_configs.Parameter(name='G_bNa', default_value=1),
+            ga_configs.Parameter(name='G_NaL', default_value=1),
+            ga_configs.Parameter(name='G_CaL', default_value=1),
+            ga_configs.Parameter(name='G_pCa', default_value=1),
+            ga_configs.Parameter(name='G_bCa', default_value=1)]
+        new_params = [.7, .7, .7, .7, .7, .7, .7, .7, .7, .7]
 
         baseline_trace = paci_2018.generate_trace(protocol)
-        new_trace = paci_2018.generate_trace(protocol, \
-                    tunable_parameters, new_params)
+        new_trace = paci_2018.generate_trace(protocol,
+                                             tunable_parameters, new_params)
 
-        tst.assert_raises(AssertionError, tst.assert_array_equal, \
-                baseline_trace.y, new_trace.y, \
-                'updating parameters does not change trace')
+        tst.assert_raises(AssertionError, tst.assert_array_equal,
+                          baseline_trace.y, new_trace.y,
+                          'updating parameters does not change trace')
 
     def test_no_ion_selective(self):
         protocol = protocols.SingleActionPotentialProtocol()
         paci_baseline = paci_2018.PaciModel()
         ion_selective_scales = {'I_CaL': .4, 'I_NaCa': .4}
-        paci_no_ion = paci_2018.PaciModel(no_ion_selective_dict=ion_selective_scales)
+        paci_no_ion = paci_2018.PaciModel(
+            no_ion_selective_dict=ion_selective_scales)
 
         baseline_trace = paci_baseline.generate_response(protocol)
         baseline_no_ion_trace = paci_no_ion.generate_response(protocol,
@@ -74,7 +67,8 @@ class TestPaci2018(unittest.TestCase):
 
         baseline_trace = paci_baseline.generate_response(protocol)
         paci_baseline.no_ion_selective = ion_selective_scales
-        baseline_no_ion_trace = paci_baseline.generate_response(protocol, is_no_ion_selective=True)
+        baseline_no_ion_trace = paci_baseline.generate_response(
+            protocol, is_no_ion_selective=True)
 
         tst.assert_raises(AssertionError, tst.assert_array_equal,
                           baseline_trace.y, baseline_no_ion_trace.y,
@@ -83,7 +77,7 @@ class TestPaci2018(unittest.TestCase):
     def test_no_ion_selective_IK1_no_effect(self):
         protocol = protocols.SingleActionPotentialProtocol()
         paci_k1_increase = paci_2018.PaciModel(updated_parameters=
-                                               {'G_K1':28.1492*1.4})
+                                               {'G_K1':1.4})
         ion_selective_scales = {'I_K1': .4}
         paci_k1_no_ion = paci_2018.PaciModel(no_ion_selective_dict=
                                              ion_selective_scales)
