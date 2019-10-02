@@ -102,8 +102,7 @@ class CellModel:
                 [0, protocol.duration],
                 self.y_initial,
                 method='BDF',
-                max_step=1e-3*self.time_conversion,
-                first_step=2e-5*self.time_conversion)
+                max_step=1e-3*self.time_conversion)
                 
             self._set_data_without_error(solution, is_current_response=True)
         except ValueError:
@@ -210,7 +209,7 @@ class CellModel:
         mask = np.invert(np.insert(np.diff(new_indices) < 0, [0], False))
         correct_indices = new_indices[mask] - 1
 
-        self.t = np.asarray(self.t)[correct_indices].tolist()
+        self.t = np.asarray(time_full)[correct_indices].tolist()
         self.y_voltage = np.asarray(self.y_voltage)[correct_indices].tolist()
         self.full_y =  np.asarray(self.full_y)[correct_indices].tolist()
         self.d_y_voltage = \

@@ -568,6 +568,8 @@ class KernikModel(CellModel):
             ]
             self.current_response_info.currents.append(current_timestep)
 
+        self.d_y_voltage.append(d_y[0])
+
         return d_y
 
 
