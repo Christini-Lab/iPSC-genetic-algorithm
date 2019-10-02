@@ -14,11 +14,11 @@ class TestPaci2018(unittest.TestCase):
         baseline_model.generate_response(protocol)
         pdb.set_trace()
 
-        self.assertTrue(len(baseline_trace.t) > 100,
+        self.assertTrue(len(baseline_model.t) > 100,
                 'Paci errored in less than .4s')
-        self.assertTrue(min(baseline_trace.y) < -.01,
+        self.assertTrue(min(baseline_model.y_voltage) < -.01,
                 'baseline Paci min is greater than .01')
-        self.assertTrue(max(baseline_trace.y)<.06,
+        self.assertTrue(max(baseline_model.y_voltage)<.06,
                 'baseline Paci max is greater than .06')
 
     def test_update_parameters(self):
