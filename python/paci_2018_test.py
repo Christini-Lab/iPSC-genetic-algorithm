@@ -12,7 +12,6 @@ class TestPaci2018(unittest.TestCase):
 
         baseline_model = paci_2018.PaciModel()
         baseline_model.generate_response(protocol)
-        pdb.set_trace()
 
         self.assertTrue(len(baseline_trace.t) > 100,
                 'Paci errored in less than .4s')
