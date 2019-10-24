@@ -13,6 +13,9 @@ class TestKernik(unittest.TestCase):
 
         baseline_model = kernik.KernikModel()
         baseline_model.generate_response(protocol)
+        import seaborn as sns
+        plt.plot(baseline_model.t, baseline_model.y_voltage)
+        pdb.set_trace()
 
         self.assertTrue(len(baseline_model.t) > 100,
                 'Kernik errored in less than .4s')
