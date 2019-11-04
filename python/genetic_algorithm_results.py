@@ -18,6 +18,7 @@ import seaborn as sns
 
 import ga_configs
 import paci_2018
+import kernik
 import protocols
 import trace
 
@@ -147,9 +148,13 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
     def __init__(self, config: ga_configs.ParameterTuningConfig) -> None:
         super().__init__()
         self.config = config
-        self.baseline_trace = paci_2018.generate_trace(
+        #self.baseline_trace = paci_2018.generate_trace(
+        #    tunable_parameters=config.tunable_parameters,
+        #    protocol=config.protocol)
+        self.baseline_trace = kernik.generate_trace(
             tunable_parameters=config.tunable_parameters,
             protocol=config.protocol)
+
 
     def get_parameter_scales(self, individual):
         parameter_scaling = []
@@ -169,10 +174,14 @@ class GAResultParameterTuning(GeneticAlgorithmResult):
                 [i * 1000 for i in self.baseline_trace.y],
                 color='black')
 
-        trace = paci_2018.generate_trace(
+        trace = kernik.generate_trace(
             tunable_parameters=self.config.tunable_parameters,
             protocol=self.config.protocol,
             params=individual.parameters)
+        #trace = paci_2018.generate_trace(
+        #    tunable_parameters=self.config.tunable_parameters,
+        #    protocol=self.config.protocol,
+        #    params=individual.parameters)
         if trace:
             if isinstance(self.config.protocol, protocols.VoltageClampProtocol):
                 trace.plot_only_currents(color='b--')
@@ -374,7 +383,8 @@ def graph_optimized_vc_protocol_full_figure(
         config: ga_configs.VoltageOptimizationConfig) -> None:
     """Graphs a full figure for a optimized voltage protocol."""
     plt.figure(figsize=(20, 10))
-    i_trace = paci_2018.generate_trace(protocol=combined_protocol)
+    #i_trace = paci_2018.generate_trace(protocol=combined_protocol)
+    i_trace = kernik.generate_trace(protocol=combined_protocol)
     i_trace.plot_with_currents(title='')
     plt.savefig('figures/Voltage Clamp Figure/Full VC Optimization/Combined '
                 'trace.svg')
@@ -383,7 +393,9 @@ def graph_optimized_vc_protocol_full_figure(
     i = 1
     for key in sorted(single_current_protocols.keys()):
         plt.figure(figsize=(10, 5))
-        i_trace = paci_2018.generate_trace(
+        #i_trace = paci_2018.generate_trace(
+        #    protocol=single_current_protocols[key])
+        i_trace = kernik.generate_trace(
             protocol=single_current_protocols[key])
         i_trace.plot_with_currents(title=r'$I_{{{}}}$'.format(key[2:]))
         i += 1
@@ -412,7 +424,8 @@ def graph_single_current_contributions(
     """Graphs the max current contributions for single currents together."""
     single_current_max_contributions = {}
     for key, value in single_current_protocols.items():
-        i_trace = paci_2018.generate_trace(protocol=value)
+        #i_trace = paci_2018.generate_trace(protocol=value)
+        i_trace = kernik.generate_trace(protocol=value)
 
         max_contributions = i_trace.current_response_info.\
             get_max_current_contributions(
@@ -433,7 +446,8 @@ def graph_combined_current_contributions(
         config: ga_configs.VoltageOptimizationConfig,
         title: str) -> None:
     """Graphs the max current contributions for a single protocol."""
-    i_trace = paci_2018.generate_trace(protocol=protocol)
+    #i_trace = paci_2018.generate_trace(protocol=protocol)
+    i_trace = kernik.generate_trace(protocol=protocol)
     max_contributions = i_trace.current_response_info.\
         get_max_current_contributions(
             time=i_trace.t,
@@ -457,9 +471,9 @@ def graph_current_contributions_helper(currents,
     # Sort currents according to alphabetic order.
     zipped_list = sorted(zip(currents, contributions))
     contributions = [
-        contrib for curr, contrib in zipped_list if curr not in target_currents
+        contrib for curr, contrib in zipped_list if curr in target_currents
     ]
-    currents = [curr for curr, _ in zipped_list if curr not in target_currents]
+    currents = [curr for curr, _ in zipped_list if curr in target_currents]
 
     currents = ['$I_{{{}}}$'.format(i[2:]) for i in currents]
 
@@ -475,7 +489,6 @@ def graph_current_contributions_helper(currents,
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     plt.savefig('figures/Voltage Clamp Figure/{}.svg'.format(title))
-
 
 class Individual:
     """Represents an individual in a genetic algorithm population.
@@ -546,8 +559,11 @@ class VCOptimizationIndividual(Individual):
 
     def evaluate(self, config: ga_configs.VoltageOptimizationConfig) -> int:
         """Evaluates the fitness of the individual."""
-        i_trace = paci_2018.PaciModel().generate_response(
+        #i_trace = paci_2018.PaciModel().generate_response(
+        #    protocol=self.protocol)
+        i_trace = kernik.KernikModel().generate_response(
             protocol=self.protocol)
+
         if not i_trace:
             return 0
 
