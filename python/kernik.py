@@ -143,8 +143,8 @@ class KernikModel(CellModel):
         xK14 = self.x_K1[4]
         xK15 = self.x_K1[5]
 
-        alpha_xK1 = xK11*exp((y[0]+xK13)/xK12)
-        beta_xK1 = exp((y[0]+xK15)/xK14)
+        alpha_xK1 = xK11*np.exp((y[0]+xK13)/xK12)
+        beta_xK1 = np.exp((y[0]+xK15)/xK14)
         XK1_inf = alpha_xK1/(alpha_xK1+beta_xK1)
 
         # Current:
@@ -169,15 +169,15 @@ class KernikModel(CellModel):
         Xr2_4 = 1/((1/Xr2_2)+(1/Xr2_6))
 
         # 10: Xr1 (dimensionless) (activation in i_Kr_Xr1)
-        alpha_Xr1 = Xr1_1*exp((y[0])/Xr1_2)
-        beta_Xr1 = Xr1_3*exp((y[0])/Xr1_4)
+        alpha_Xr1 = Xr1_1*np.exp((y[0])/Xr1_2)
+        beta_Xr1 = Xr1_3*np.exp((y[0])/Xr1_4)
         Xr1_inf = alpha_Xr1/(alpha_Xr1 + beta_Xr1)
         tau_Xr1 = ((1./(alpha_Xr1 + beta_Xr1))+self.x_KR[9])
         d_y[9] = (Xr1_inf-y[9])/tau_Xr1
 
         # 11: Xr2 (dimensionless) (inactivation in i_Kr_Xr2)
-        alpha_Xr2 = Xr2_1*exp((y[0])/Xr2_2)
-        beta_Xr2 = Xr2_3*exp((y[0])/Xr2_4)
+        alpha_Xr2 = Xr2_1*np.exp((y[0])/Xr2_2)
+        beta_Xr2 = Xr2_3*np.exp((y[0])/Xr2_4)
         Xr2_inf = alpha_Xr2/(alpha_Xr2+beta_Xr2)
         tau_Xr2 = ((1./(alpha_Xr2+beta_Xr2))+self.x_KR[10])
         d_y[10] = (Xr2_inf-y[10])/tau_Xr2
@@ -199,8 +199,8 @@ class KernikModel(CellModel):
         ks4 = 1/((1/ks2)+(1/ks6))
 
         # 12: Xs (dimensionless) (activation in i_Ks)
-        alpha_Xs = ks1*exp((y[0])/ks2)
-        beta_Xs = ks3*exp((y[0])/ks4)
+        alpha_Xs = ks1*np.exp((y[0])/ks2)
+        beta_Xs = ks3*np.exp((y[0])/ks4)
         Xs_inf = alpha_Xs/(alpha_Xs+beta_Xs)
         tau_Xs = (1./(alpha_Xs+beta_Xs)) + tauks_const
         d_y[11] = (Xs_inf-y[11])/tau_Xs
@@ -229,15 +229,15 @@ class KernikModel(CellModel):
         s4 = 1/((1/s2)+(1/s6))
 
         # 17: s (dimensionless) (inactivation in i_to)
-        alpha_s = s1*exp((y[0])/s2)
-        beta_s = s3*exp((y[0])/s4)
+        alpha_s = s1*np.exp((y[0])/s2)
+        beta_s = s3*np.exp((y[0])/s4)
         s_inf = alpha_s/(alpha_s+beta_s)
         tau_s = ((1./(alpha_s+beta_s))+tau_s_const)
         d_y[16] = (s_inf-y[16])/tau_s
 
         # 18: r (dimensionless) (activation in i_to)
-        alpha_r = r1*exp((y[0])/r2)
-        beta_r = r3*exp((y[0])/r4)
+        alpha_r = r1*np.exp((y[0])/r2)
+        beta_r = r3*np.exp((y[0])/r4)
         r_inf = alpha_r/(alpha_r + beta_r)
         tau_r = (1./(alpha_r + beta_r))+tau_r_const
         d_y[17] = (r_inf-y[17])/tau_r
@@ -266,15 +266,15 @@ class KernikModel(CellModel):
         f4 = 1/((1/f2)+(1/f6))
 
         # 7: d (dimensionless) (activation in i_CaL)
-        alpha_d = d1*exp(((y[0]))/d2)
-        beta_d = d3*exp(((y[0]))/d4)
+        alpha_d = d1*np.exp(((y[0]))/d2)
+        beta_d = d3*np.exp(((y[0]))/d4)
         d_inf = alpha_d/(alpha_d + beta_d)
         tau_d = ((1/(alpha_d + beta_d))+taud_const)
         d_y[6] = (d_inf-y[6])/tau_d
 
         # 8: f (dimensionless) (inactivation  i_CaL)
-        alpha_f = f1*exp(((y[0]))/f2)
-        beta_f = f3*exp(((y[0]))/f4)
+        alpha_f = f1*np.exp(((y[0]))/f2)
+        beta_f = f3*np.exp(((y[0]))/f4)
         f_inf = alpha_f/(alpha_f+beta_f)
         tau_f = ((1./(alpha_f+beta_f)) + tauf_const)
         d_y[7] = (f_inf-y[7])/tau_f
@@ -283,8 +283,8 @@ class KernikModel(CellModel):
         # from Ten tusscher 2004
         scale_Ical_Fca_Cadep = 1.2
         alpha_fCa = 1.0/(1.0+((scale_Ical_Fca_Cadep*y[2])/.000325) ** 8.0)
-        beta_fCa = 0.1/(1.0+exp((scale_Ical_Fca_Cadep*y[2]-.0005)/0.0001))
-        gamma_fCa = .2/(1.0+exp((scale_Ical_Fca_Cadep*y[2]-0.00075)/0.0008))
+        beta_fCa = 0.1/(1.0+np.exp((scale_Ical_Fca_Cadep*y[2]-.0005)/0.0001))
+        gamma_fCa = .2/(1.0+np.exp((scale_Ical_Fca_Cadep*y[2]-0.00075)/0.0008))
 
         fCa_inf = ((alpha_fCa+beta_fCa+gamma_fCa+.23)/(1.46))
         tau_fCa = 2  # ms
@@ -309,17 +309,17 @@ class KernikModel(CellModel):
         p_CaL_Na = p_CaL_shannonNap*p_CaL
         p_CaL_K = p_CaL_shannonKp*p_CaL
 
-        ibarca = p_CaL_Ca*4.0*y[0]*self.F ** 2.0/(self.R*self.T) * (.341*y[2]*exp(
-            2.0*y[0]*self.F/(self.R*self.T))-0.341*self.Cao)/(exp(2.0*y[0]*self.F/(self.R*self.T))-1.0)
+        ibarca = p_CaL_Ca*4.0*y[0]*self.F ** 2.0/(self.R*self.T) * (.341*y[2]*np.exp(
+            2.0*y[0]*self.F/(self.R*self.T))-0.341*self.Cao)/(np.exp(2.0*y[0]*self.F/(self.R*self.T))-1.0)
         i_CaL_Ca = ibarca * y[6]*y[7]*y[8]
 
         ibarna = p_CaL_Na * \
-            y[0]*self.F ** 2.0/(self.R*self.T) * (.75*y[3]*exp(y[0]*self.F/(self.R*self.T)) -
-                                  0.75*self.Nao)/(exp(y[0]*self.F/(self.R*self.T))-1.0)
+            y[0]*self.F ** 2.0/(self.R*self.T) * (.75*y[3]*np.exp(y[0]*self.F/(self.R*self.T)) -
+                                  0.75*self.Nao)/(np.exp(y[0]*self.F/(self.R*self.T))-1.0)
         i_CaL_Na = ibarna * y[6]*y[7]*y[8]
 
         ibark = p_CaL_K*y[0]*self.F ** 2.0/(self.R*self.T) * (.75*y[4] *
-                                              exp(y[0]*self.F/(self.R*self.T))-0.75*self.Ko)/(exp(
+                                              np.exp(y[0]*self.F/(self.R*self.T))-0.75*self.Ko)/(np.exp(
                                                   y[0]*self.F/(self.R*self.T))-1.0)
         i_CaL_K = ibark * y[6]*y[7]*y[8]
 
@@ -330,13 +330,13 @@ class KernikModel(CellModel):
         # G_CaT determined by fit to Kurokawa IV:
 
         # 19: dCaT (activation in i_CaT)
-        dcat_inf = 1./(1+exp(-((y[0]) + 26.3)/6))
-        tau_dcat = 1./(1.068*exp(((y[0])+26.3)/30) + 1.068*exp(-((y[0])+26.3)/30))
+        dcat_inf = 1./(1+np.exp(-((y[0]) + 26.3)/6))
+        tau_dcat = 1./(1.068*np.exp(((y[0])+26.3)/30) + 1.068*np.exp(-((y[0])+26.3)/30))
         d_y[18] = (dcat_inf-y[18])/tau_dcat
 
         # 20: fCaT (inactivation in i_CaT)
-        fcat_inf = 1./(1+exp(((y[0]) + 61.7)/5.6))
-        tau_fcat = 1./(.0153*exp(-((y[0])+61.7)/83.3) + 0.015*exp(
+        fcat_inf = 1./(1+np.exp(((y[0]) + 61.7)/5.6))
+        tau_fcat = 1./(.0153*np.exp(-((y[0])+61.7)/83.3) + 0.015*np.exp(
             ((y[0])+61.7)/15.38))
         d_y[19] = (fcat_inf-y[19])/tau_fcat
 
@@ -370,22 +370,22 @@ class KernikModel(CellModel):
         j4 = 1/((1/j2)+(1/j6))
 
         # 13: h (dimensionless) (inactivation in i_Na)
-        alpha_h = h1*exp((y[0])/h2)
-        beta_h = h3*exp((y[0])/h4)
+        alpha_h = h1*np.exp((y[0])/h2)
+        beta_h = h3*np.exp((y[0])/h4)
         h_inf = (alpha_h/(alpha_h+beta_h))
         tau_h = ((1./(alpha_h+beta_h))+tau_h_const)
         d_y[12] = (h_inf-y[12])/tau_h
 
         # 14: j (dimensionless) (slow inactivation in i_Na)
-        alpha_j = j1*exp((y[0])/j2)
-        beta_j = j3*exp((y[0])/j4)
+        alpha_j = j1*np.exp((y[0])/j2)
+        beta_j = j3*np.exp((y[0])/j4)
         j_inf = (alpha_j/(alpha_j+beta_j))
         tau_j = ((1./(alpha_j+beta_j))+tau_j_const)
         d_y[13] = (j_inf-y[13])/tau_j
 
         # 15: m (dimensionless) (activation in i_Na)
-        alpha_m = m1*exp((y[0])/m2)
-        beta_m = m3*exp((y[0])/m4)
+        alpha_m = m1*np.exp((y[0])/m2)
+        beta_m = m3*np.exp((y[0])/m4)
         m_inf = alpha_m/(alpha_m+beta_m)
         tau_m = ((1./(alpha_m+beta_m))+tau_m_const)
         d_y[14] = (m_inf-y[14])/tau_m
@@ -407,8 +407,8 @@ class KernikModel(CellModel):
         xF4 = 1/((1/xF2)+(1/xF6))
 
         # 16: Xf (dimensionless) (inactivation in i_f)
-        alpha_Xf = xF1*exp((y[0])/xF2)
-        beta_Xf = xF3*exp((y[0])/xF4)
+        alpha_Xf = xF1*np.exp((y[0])/xF2)
+        beta_Xf = xF3*np.exp((y[0])/xF4)
         Xf_inf = alpha_Xf/(alpha_Xf+beta_Xf)
         tau_Xf = ((1./(alpha_Xf+beta_Xf))+xF_const)
         d_y[15] = (Xf_inf-y[15])/tau_Xf
@@ -432,10 +432,10 @@ class KernikModel(CellModel):
         # maximal inaca pA_per_pF (in i_NaCa)
         kNaCa = 1000*1.1*self.default_parameters['K_NaCa']
 
-        i_NaCa = kNaCa*((exp(gamma*y[0]*self.F/(self.R*self.T))*(y[3] ** 3.0)*self.Cao)-(exp(
+        i_NaCa = kNaCa*((np.exp(gamma*y[0]*self.F/(self.R*self.T))*(y[3] ** 3.0)*self.Cao)-(np.exp(
             (gamma-1.0)*y[0]*self.F/(self.R*self.T))*(
             self.Nao ** 3.0)*y[2]*alpha))/(((KmNai ** 3.0)+(self.Nao ** 3.0))*(KmCa+self.Cao)*(
-                1.0+Ksat*exp((gamma-1.0)*y[0]*self.F/(self.R*self.T))))
+                1.0+Ksat*np.exp((gamma-1.0)*y[0]*self.F/(self.R*self.T))))
 
         # Na+/K+ pump current (INaK):
         # Ten Tusscher formulation
@@ -443,8 +443,8 @@ class KernikModel(CellModel):
         Km_Na = 40.0  # Nai half-saturation constant millimolar (in i_NaK)
         # maxiaml nak pA_per_pF (in i_NaK)
         PNaK = 1.362*1.818*self.default_parameters['P_NaK']
-        i_NaK = PNaK*((self.Ko*y[3])/((self.Ko+Km_K)*(y[3]+Km_Na)*(1.0 + 0.1245*exp(
-            -0.1*y[0]*self.F/(self.R*self.T))+0.0353*exp(-y[0]*self.F/(self.R*self.T)))))
+        i_NaK = PNaK*((self.Ko*y[3])/((self.Ko+Km_K)*(y[3]+Km_Na)*(1.0 + 0.1245*np.exp(
+            -0.1*y[0]*self.F/(self.R*self.T))+0.0353*np.exp(-y[0]*self.F/(self.R*self.T)))))
 
         # SR Uptake/SERCA (J_up):
         # Ten Tusscher formulation
