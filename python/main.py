@@ -60,7 +60,7 @@ SAP_CONFIG = ga_configs.ParameterTuningConfig(
 
 VC_CONFIG = ga_configs.ParameterTuningConfig(
     population_size=4,
-    max_generations=10,
+    max_generations=5,
     protocol=VC_PROTOCOL,
     tunable_parameters=PARAMETERS,
     params_lower_bound=0.1,
@@ -71,12 +71,36 @@ VC_CONFIG = ga_configs.ParameterTuningConfig(
     gene_mutation_probability=0.2,
     tournament_size=4)
 
+VCO_CONFIG_KERNIK = ga_configs.VoltageOptimizationConfig(
+    window=100,
+    step_size=50,
+    steps_in_protocol=8,
+    step_duration_bounds=(25, 800),
+    step_voltage_bounds=(-120, 60),
+    target_currents=['I_Na', 'I_K1', 'I_To', 'I_CaL', 'I_Kr', 'I_Ks'],
+    population_size=20,
+    max_generations=20,
+    mate_probability=0.9,
+    mutate_probability=0.9,
+    gene_swap_probability=0.2,
+    gene_mutation_probability=0.2,
+    tournament_size=2)
+
+COMBINED_VC_CONFIG = ga_configs.CombinedVCConfig(
+    currents=[
+        'I_Na', 'I_K1', 'I_To',
+        'I_CaL', 'I_Kr', 'I_Ks',
+    ],
+    step_range=range(5, 6, 1),
+    adequate_fitness_threshold=0.95,
+    ga_config=VCO_CONFIG_KERNIK)
+
 def main():
     """Run parameter tuning or voltage clamp protocol experiments here
     """
-    parameter_tuning_experiments.run_param_tuning_experiment(
-        config=SAP_CONFIG,
-        with_output=True)
+    voltage_clamp_optimization_experiments.construct_optimal_protocol(
+            vc_protocol_optimization_config=COMBINED_VC_CONFIG,
+            with_output=True)
 
 
 if __name__ == '__main__':
