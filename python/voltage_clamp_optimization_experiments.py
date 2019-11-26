@@ -108,7 +108,6 @@ def construct_optimal_protocol(
         if not os.path.exists('figures/Voltage Clamp Figure/'
                               'Full VC Optimization'):
             os.makedirs('figures/Voltage Clamp Figure/Full VC Optimization')
- 
         try:
             genetic_algorithm_results.graph_optimized_vc_protocol_full_figure(
                 single_current_protocols=optimal_protocols,

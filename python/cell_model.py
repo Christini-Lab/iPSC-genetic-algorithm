@@ -66,10 +66,13 @@ class CellModel:
             time.
         """
         # Reset instance variables when model is run again.
-        self.t = []
-        self.y_voltage = []
-        self.d_y_voltage = []
-        self.full_y = []
+        #self.t = []
+        #self.y_voltage = []
+        #self.d_y_voltage = []
+        #self.full_y = []
+        import pdb
+        pdb.set_trace()
+        print('hello')
 
         self.is_no_ion_selective = is_no_ion_selective
 

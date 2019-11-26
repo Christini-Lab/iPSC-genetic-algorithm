@@ -26,9 +26,19 @@ class VCOGeneticAlgorithm:
         print('\tEvaluating initial population.')
         for individual in population:
             individual.fitness = self._evaluate(individual=individual)
-
+        
         for generation in range(1, self.config.max_generations):
             print('\tGeneration {}'.format(generation))
+            i_max = max(population)
+            i_max_index = population.index(i_max)
+            if i_max_index == 0:
+                i_rand = population[1]
+            else:
+                i_rand = population[0]
+
+            population.remove(i_max)
+            population.remove(i_rand)
+
             population = self._select(population=population)
 
             for i_one, i_two in zip(population[::2], population[1::2]):
@@ -38,6 +48,9 @@ class VCOGeneticAlgorithm:
             for individual in population:
                 if random.random() < self.config.mutate_probability:
                     self._mutate(individual=individual)
+
+            population.append(i_max)
+            population.append(i_rand)
 
             # Update fitness of all individuals in population.
             for individual in population:
@@ -97,20 +110,25 @@ class VCOGeneticAlgorithm:
                 new_voltage_offset = np.random.normal(
                     loc=0,
                     scale=abs(v_bounds[0] - v_bounds[1]) / 3)
+
                 individual.protocol.steps[i].voltage += new_voltage_offset
-                if individual.protocol.steps[i].voltage > v_bounds[1]:
-                    individual.protocol.steps[i].voltage = v_bounds[1]
-                elif individual.protocol.steps[i].voltage < v_bounds[0]:
-                    individual.protocol.steps[i].voltage = v_bounds[0]
+                while ((individual.protocol.steps[i].voltage > v_bounds[1]) or
+                       (individual.protocol.steps[i].voltage < v_bounds[0])):
+                    new_voltage_offset = np.random.normal(
+                        loc=0,
+                        scale=abs(v_bounds[0] - v_bounds[1]) / 3)
+                    individual.protocol.steps[i].voltage += new_voltage_offset
 
                 new_duration_offset = np.random.normal(
                     loc=0,
                     scale=abs(d_bounds[0] - d_bounds[1]) / 3)
                 individual.protocol.steps[i].duration += new_duration_offset
-                if individual.protocol.steps[i].duration > d_bounds[1]:
-                    individual.protocol.steps[i].duration = d_bounds[1]
-                elif individual.protocol.steps[i].duration < d_bounds[0]:
-                    individual.protocol.steps[i].duration = d_bounds[0]
+                while ((individual.protocol.steps[i].duration > d_bounds[1]) or
+                       (individual.protocol.steps[i].duration < d_bounds[0])):
+                    new_duration_offset = np.random.normal(
+                        loc=0,
+                        scale=abs(d_bounds[0] - d_bounds[1]) / 3)
+                    individual.protocol.steps[i].duration += new_duration_offset
 
     def _select(
             self,

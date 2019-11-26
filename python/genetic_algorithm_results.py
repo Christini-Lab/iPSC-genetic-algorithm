@@ -438,6 +438,7 @@ def graph_single_current_contributions(
     graph_current_contributions_helper(
         currents=single_current_max_contributions.keys(),
         contributions=single_current_max_contributions.values(),
+        target_currents=config.target_currents,
         title=title)
 
 
