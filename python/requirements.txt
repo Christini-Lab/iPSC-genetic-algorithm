@@ -22,5 +22,5 @@ semver==2.8.1
 singularity==3.0.0
 six==1.12.0
 spython==0.0.73
-urllib3==1.25.3
+urllib3==1.26.5
 websocket-client==0.56.0
